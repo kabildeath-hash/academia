@@ -343,6 +343,7 @@
                 defs: { folders: [], defs: [], lastFolderId: null },   // folders: [{id,name,parentId,createdAt}] (parentId null = top level)
                 rough: { text: '', updatedAt: 0 },                     // scratchpad, autosaved while typing
                 homeworks: [],                                          // [{id,title,subject,due,priority,notes,done,createdAt,completedAt}]
+                t321: { count: 0, lastAt: 0 },                          // 3·2·1 lock-in ritual counters
                 lastTool: 'defs'
             };
         }
@@ -1129,6 +1130,19 @@ async function readFromHandle(handle) {
                 .ac-toast{position:fixed;bottom:24px;right:24px;max-width:360px;background:${S.panel2};border:1px solid ${S.lavender};border-radius:12px;padding:14px 20px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(196,181,253,.3);z-index:2000;animation:toastIn .3s}
                 .ac-fx{position:fixed;pointer-events:none;z-index:3000}
                 .ac-xpfloat{position:fixed;left:50%;bottom:30%;font-size:28px;font-weight:800;color:#f5d78e;text-shadow:0 0 12px #f5d78e88;animation:rise 1.4s ease-out forwards;z-index:3000;pointer-events:none}
+                @keyframes stNum{0%{transform:scale(.2) rotate(-10deg);opacity:0}55%{transform:scale(1.18) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+                @keyframes stRing{0%{transform:scale(.55);opacity:.7}100%{transform:scale(1.8);opacity:0}}
+                @keyframes stSpark{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-170px) scale(1.3);opacity:0}}
+                @keyframes stLock{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+                @keyframes stBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+                @keyframes stWiggle{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+                .st-num{animation:stNum .55s cubic-bezier(.34,1.56,.64,1) both;text-shadow:0 0 38px var(--g,transparent)}
+                .st-ring{position:absolute;inset:0;border-radius:50%;border:3px solid var(--g,transparent);animation:stRing .95s ease-out forwards;pointer-events:none}
+                .st-spark{position:absolute;bottom:16%;animation:stSpark 1.5s ease-out forwards;pointer-events:none}
+                .st-lock{animation:stLock .5s cubic-bezier(.34,1.56,.64,1) both}
+                .st-beat{animation:stBeat 1s ease-in-out infinite;display:inline-block}
+                .st-wiggle{display:inline-block;animation:stWiggle 2.6s ease-in-out infinite}
+                .st-btn{animation:stBeat 1.7s ease-in-out infinite,glow 2.3s ease-in-out infinite}
                 @media(max-width:600px){.ac-toast{left:12px;right:12px;bottom:16px;max-width:none}}
                 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}
             `; const style = document.createElement('style'); style.id = 'academia-styles'; style.textContent = css; document.head.appendChild(style); 
@@ -2491,16 +2505,124 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
             ); 
         } 
 
-        function StudyingToolsTab({ state, update, toast }) { 
+        // --- ST: 3·2·1 lock-in ritual ---
+        function Tool321({ st, update, toast, onNav }) { 
+            const INK = '#08080c';                      // pitch-black text on pastel
+            const INK_SOFT = 'rgba(8,8,12,.62)';        // muted black for secondary text
+            const PILL = { background: 'rgba(255,255,255,.94)', color: INK, border: `1.5px solid ${INK}`, boxShadow: `0 3px 0 ${INK}` };  // pressable sticker button
+            const T = st.t321 || { count: 0, lastAt: 0 }; 
+            const [phase, setPhase] = useState('idle');   // 'idle' | 3 | 2 | 1 | 'locked'
+            const STEPS = { 
+                3: { deep: '#7d66d9', bg: 'linear-gradient(165deg,#ece4ff 0%,#d7c6fd 100%)', word: 'Sit up. Shoulders down.', emoji: '🌸', note: 392 }, 
+                2: { deep: '#d5568f', bg: 'linear-gradient(165deg,#ffe6f1 0%,#fbcbe3 100%)', word: 'Phone away. Desk clear.', emoji: '🫧', note: 494 }, 
+                1: { deep: '#4d88c7', bg: 'linear-gradient(165deg,#e2f0fc 0%,#c6dcf3 100%)', word: 'One deep breath in…', emoji: '💗', note: 587 } 
+            }; 
+            const begin = () => { FX.play('click'); setPhase(3); }; 
+
+            useEffect(() => { 
+                if (phase === 3 || phase === 2 || phase === 1) { 
+                    FX.tone(STEPS[phase].note, .3, 'sine', .07); 
+                    const t = setTimeout(() => setPhase(phase === 3 ? 2 : phase === 2 ? 1 : 'locked'), 1000); 
+                    return () => clearTimeout(t); 
+                } 
+                if (phase === 'locked') { 
+                    // tiny rising chime + sparkle burst — the ritual's "seal"
+                    FX.tone(523, .12, 'triangle', .07); FX.tone(659, .12, 'triangle', .07, .1); FX.tone(784, .12, 'triangle', .07, .2); FX.tone(1047, .5, 'triangle', .08, .3); 
+                    FX.burst(['✨','⚡','💫','⭐','💖'], 34); 
+                    update(s => { if (!s.human.studyTools.t321) s.human.studyTools.t321 = { count: 0, lastAt: 0 }; s.human.studyTools.t321.count += 1; s.human.studyTools.t321.lastAt = Date.now(); }); 
+                } 
+            }, [phase]); 
+
+            const sparks = useMemo(() => { 
+                const EMO = ['✨','💫','⭐','🌸','💖','🫧']; 
+                return Array.from({ length: 7 }, () => ({ 
+                    e: EMO[Math.floor(Math.random() * EMO.length)], 
+                    left: 8 + Math.random() * 84, 
+                    delay: Math.random() * .6, 
+                    size: 13 + Math.random() * 14 
+                })); 
+            }, [phase]); 
+
+            if (phase === 'idle') return ( 
+                <Card style={{ textAlign:'center', padding: '46px 20px', position:'relative', overflow:'hidden', color: INK, background: 'linear-gradient(165deg,#ece4ff 0%,#ffe0ef 55%,#d9eafc 100%)', border: `1.5px solid ${INK}2e` }}> 
+                    {['✨','🌙','💫','⭐'].map((e, i) => ( 
+                        <span key={i} className="ac-float" style={{ position:'absolute', left: (8 + i * 26) + '%', top: (i % 2 ? 12 : 62) + '%', fontSize: 16 + (i % 3) * 5, opacity: .45, pointerEvents:'none', animationDelay: (i * .5) + 's' }}>{e}</span> 
+                    ))} 
+                    <div className="st-wiggle" style={{ fontSize: 40, marginBottom: 8 }}>🧸</div> 
+                    <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>The 3 · 2 · 1 Ritual</div> 
+                    <div style={{ fontSize: 13.5, color: INK_SOFT, maxWidth: 400, margin: '0 auto 20px', lineHeight: 1.65 }}> 
+                        When it's time to study, tap the button and count down with it — three numbers, that's the whole ritual. 
+                        Do it every time, and soon just <em>thinking</em> "3, 2, 1" will flip your brain into study mode. 
+                    </div> 
+                    <div style={{ display:'flex', gap: 10, justifyContent:'center', margin: '0 0 24px' }}> 
+                        {[3, 2, 1].map((n, i) => ( 
+                            <span key={n} className="ac-float" style={{ width: 44, height: 44, borderRadius: 14, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize: 20, fontWeight: 800, color: INK, background: 'rgba(255,255,255,.75)', border: `1.5px solid ${STEPS[n].deep}55`, boxShadow: '0 3px 8px rgba(8,8,12,.1)', animationDelay: (i * .35) + 's' }}>{n}</span> 
+                        ))} 
+                    </div> 
+                    <button onClick={begin} className="st-btn" style={{ '--g': '#f5b3d3', width: 150, height: 150, borderRadius: '50%', cursor:'pointer', background: '#ffffff', color: INK, fontSize: 20, fontWeight: 800, border: `2.5px solid ${INK}`, outline:'none', boxShadow: `0 6px 0 ${INK}`, display:'inline-flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap: 2, fontFamily:'inherit' }}> 
+                        <span style={{ fontSize: 34, lineHeight: 1 }}>✨</span> 
+                        3 · 2 · 1 
+                    </button> 
+                    <div style={{ marginTop: 24, fontSize: 12, color: INK_SOFT }}> 
+                        {T.count > 0 
+                            ? <>You've locked in <strong style={{ color: INK }}>{T.count}×</strong> — the ritual is working 🎐</> 
+                            : 'First time? Perfect. Begin the ritual ✨'} 
+                    </div> 
+                </Card> 
+            ); 
+
+            if (phase === 'locked') return ( 
+                <Card style={{ textAlign:'center', padding: '46px 20px', position:'relative', overflow:'hidden', color: INK, background: 'linear-gradient(165deg,#d8f6e8 0%,#ece4ff 55%,#ffe0ef 100%)', border: `1.5px solid ${INK}2e` }}> 
+                    <div className="st-lock"> 
+                        <div className="st-beat" style={{ fontSize: 56, marginBottom: 10 }}>⚡</div> 
+                        <div style={{ fontSize: 'clamp(30px, 7vw, 44px)', fontWeight: 900, letterSpacing: 1, display:'inline-block', color: INK, textShadow: '0 0 22px rgba(255,255,255,.9)' }}>LOCKED IN</div> 
+                    </div> 
+                    <div style={{ fontSize: 14.5, color: INK_SOFT, margin: '16px auto 6px', maxWidth: 400, lineHeight: 1.65 }}> 
+                        Ritual complete — you just told your brain it's study time. No more scrolling, no more "in a minute". Open your books and begin. 
+                    </div> 
+                    <div style={{ fontSize: 12, color: INK_SOFT, margin: '6px 0 24px' }}>Rituals performed: <strong style={{ color: INK }}>{T.count}</strong> 🎐</div> 
+                    <div style={{ display:'flex', gap: 10, justifyContent:'center', flexWrap:'wrap' }}> 
+                        <button className="ac-btn" style={PILL} onClick={begin}>🔁 Again</button> 
+                        {onNav && <button className="ac-btn ac-btn-primary" style={{ border: `1.5px solid ${INK}`, boxShadow: `0 3px 0 ${INK}` }} onClick={() => { FX.play('click'); onNav('studying'); }}>📚 Study now</button>} 
+                        <button className="ac-btn" style={PILL} onClick={() => setPhase('idle')}>🏠 Done</button> 
+                    </div> 
+                </Card> 
+            ); 
+
+            const step = STEPS[phase]; 
+            return ( 
+                <Card style={{ textAlign:'center', padding: '34px 20px 22px', position:'relative', overflow:'hidden', color: INK, background: step.bg, border: `1.5px solid ${INK}2e` }}> 
+                    {sparks.map((sp, i) => ( 
+                        <span key={i} className="st-spark" style={{ left: sp.left + '%', fontSize: sp.size, animationDelay: sp.delay + 's' }}>{sp.e}</span> 
+                    ))} 
+                    <div style={{ height: 290, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}> 
+                        <div style={{ position:'relative', width: 208, height: 208, display:'flex', alignItems:'center', justifyContent:'center' }}> 
+                            <div className="st-ring" style={{ '--g': step.deep }} /> 
+                            <div className="st-ring" style={{ '--g': step.deep, animationDelay: '.32s' }} /> 
+                            <div className="st-num" key={phase} style={{ '--g': step.deep + '99', fontSize: 126, fontWeight: 800, color: INK, lineHeight: 1 }}>{phase}</div> 
+                        </div> 
+                        <div style={{ marginTop: 22, fontSize: 15, fontWeight: 700, color: INK }}>{step.emoji} {step.word}</div> 
+                        <div style={{ marginTop: 12, display:'flex', gap: 8 }}> 
+                            {[3, 2, 1].map(n => ( 
+                                <span key={n} style={{ width: 10, height: 10, borderRadius: '50%', background: n === phase ? STEPS[n].deep : INK + '26', boxShadow: n === phase ? `0 0 10px ${STEPS[n].deep}` : 'none', transition: 'all .2s' }} /> 
+                            ))} 
+                        </div> 
+                    </div> 
+                    <button className="ac-btn" style={{ ...PILL, fontSize: 12, padding: '6px 14px' }} onClick={() => setPhase('idle')}>✕ cancel</button> 
+                </Card> 
+            ); 
+        } 
+
+        function StudyingToolsTab({ state, update, toast, onNav }) { 
             const st = state.human.studyTools || defaultStudyTools(); 
-            const [tool, setTool] = useState(['rough', 'homeworks'].indexOf(st.lastTool) >= 0 ? st.lastTool : 'defs'); 
-            const TOOLS = [['defs', '📖 Definitions'], ['rough', '✏️ Rough'], ['homeworks', '📋 Homeworks']]; 
+            const [tool, setTool] = useState(['rough', 'homeworks', 't321'].indexOf(st.lastTool) >= 0 ? st.lastTool : 'defs'); 
+            const TOOLS = [['defs', '📖 Definitions'], ['rough', '✏️ Rough'], ['homeworks', '📋 Homeworks'], ['t321', '✨ 321']]; 
             const pick = t => { setTool(t); update(s => { if (!s.human.studyTools) s.human.studyTools = defaultStudyTools(); s.human.studyTools.lastTool = t; }); }; 
             const nDefs = (st.defs && st.defs.defs ? st.defs.defs.length : 0); 
             const nHw = (st.homeworks || []).filter(h => !h.done).length; 
             return ( 
                 <div className="ac-fade"> 
-                    <Section title="Studying Tools" sub="Your own definitions library, scratchpad and homework planner — saved with your game."> 
+                    <Section title="Studying Tools" sub="Your definitions library, scratchpad, homework planner and 3·2·1 lock-in ritual — saved with your game."> 
                         <div style={{ display:'flex', gap: 4, flexWrap:'wrap' }}> 
                             {TOOLS.map(([id, label]) => ( 
                                 <button key={id} className={`ac-tab ${tool === id ? 'active' : ''}`} onClick={() => pick(id)}> 
@@ -2512,6 +2634,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                     {tool === 'defs' && <DefinitionsTool st={st} update={update} toast={toast} />} 
                     {tool === 'rough' && <RoughTool st={st} update={update} toast={toast} />} 
                     {tool === 'homeworks' && <HomeworksTool st={st} update={update} toast={toast} />} 
+                    {tool === 't321' && <Tool321 st={st} update={update} toast={toast} onNav={onNav} />} 
                 </div> 
             ); 
         } 
@@ -2776,7 +2899,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                         {tab === 'ranked' && <RankedTab state={state} catalog={catalog} lbRP={lbRP} lbRPByCat={lbRPByCat} onStartMatch={handleStartMatch} onSetCategory={handleSetRankedCategory} toast={toastMsg} onOpenProfile={setProfileModalId} />}
                         {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
-                        {tab === 'studytools' && <StudyingToolsTab state={state} update={update} toast={toastMsg} />} 
+                        {tab === 'studytools' && <StudyingToolsTab state={state} update={update} toast={toastMsg} onNav={setTab} />}
                         {tab === 'othertasks' && <OtherTasksTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'ranks' && <TitlesTab state={state} lbRP={lbRP} lbRPByCat={lbRPByCat} />}
