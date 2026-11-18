@@ -7,30 +7,45 @@
     <style>
         body, html { margin: 0; padding: 0; background-color: #08080c; color: #f0ebf8; font-family: sans-serif; overscroll-behavior: none; }
         #loading { text-align: center; padding-top: 100px; font-size: 18px; color: #c4b5fd; }
-        .error-box { color: #f38ba8; padding: 20px; border: 1px solid #f38ba8; border-radius: 8px; margin: 20px; background: #14141e; }
+        .error-box { color: #f38ba8; padding: 20px; border: 1px solid #f38ba8; border-radius: 8px; margin: 20px; background: #14141e; word-wrap: break-word; line-height: 1.5; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+    <!-- Switched to unpkg for better mobile network compatibility -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-    <div id="root"><div id="loading">Loading Academia... (Please wait a few seconds)</div></div>
+    <div id="root"><div id="loading">Loading Academia...<br><span style="font-size:14px; color:#8888a0">(Compiling game data. May take 5-10 seconds on mobile)</span></div></div>
 
     <script>
-        window.onerror = function(msg, url, line) {
+        // Advanced Error Catcher
+        window.onerror = function(msg, url, line, col, error) {
+            let errorMsg = error ? (error.stack || error.message) : msg;
             document.getElementById('root').innerHTML = `
                 <div class="error-box">
                     <h2>Game Error</h2>
-                    <p>${msg}</p>
-                    <p>Line: ${line}</p>
-                    <p>Try clearing your browser cache and refreshing.</p>
+                    <p style="margin-top:10px; font-size:14px;">${errorMsg}</p>
+                    <p style="margin-top:10px; font-size:12px; color:#8888a0;">Line: ${line}:${col}</p>
+                    <p style="font-size:12px; color:#8888a0;">URL: ${url}</p>
                 </div>
             `;
             return false;
         };
+
+        // Network Checker
+        setTimeout(() => {
+            if (!window.React || !window.Babel) {
+                document.getElementById('root').innerHTML = `
+                    <div class="error-box">
+                        <h2>Network Error</h2>
+                        <p style="margin-top:10px; font-size:14px;">Could not load the game engine files. Please check your internet connection, disable any VPNs, or turn off Adblockers, then refresh.</p>
+                    </div>
+                `;
+            }
+        }, 8000);
     </script>
 
-    <script type="text/babel" data-type="module">
+    <script type="text/babel" data-presets="react">
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
         // ============================================================
@@ -1630,437 +1645,4 @@
                   {h.inventory.pets.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No pets yet.</div></Card> : (
                     <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))' }}>
                       {h.inventory.pets.map(p => {
-                        const isEquipped = h.equippedPet === p.instanceId;
-                        return (
-                          <Card key={p.instanceId} style={{ borderColor: isEquipped ? S.mint : S.border }}>
-                            <div style={{ textAlign:'center', marginBottom: 8 }}>
-                              <div style={{ fontSize: 36 }}>{p.emoji}</div>
-                              <div style={{ fontWeight: 700, fontSize: 13, marginTop: 4 }}>{p.petName}</div>
-                              <div style={{ marginTop: 4 }}><RarityPill rarity={p.rarity} /></div>
-                            </div>
-                            <div style={{ fontSize: 10, color: S.muted, textAlign:'center', marginBottom: 8 }}>Lv. {p.level} · +{(p.val * (1+0.05*(p.level-1))*100).toFixed(1)}% XP</div>
-                            <ProgressBar value={p.petXp} max={p.petXpNeeded} height={4} color={RARITY_COLORS[p.rarity]} />
-                            <button className={`ac-btn ${isEquipped?'':'ac-btn-primary'}`} style={{ width:'100%', marginTop: 10, fontSize: 11, padding:'6px' }} onClick={() => { onEquip(p.instanceId); toast(isEquipped ? 'Unequipped' : `Equipped ${p.petName}`); }}>
-                              {isEquipped ? 'Unequip' : 'Equip'}
-                            </button>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </Section>
-              </Section>
-            </div>
-          );
-        }
-
-        // ============================================================
-        // INVENTORY
-        // ============================================================
-        function InventoryTab({ state, onUsePotion, toast }) {
-          const h = state.human;
-          const activePot = h.activePotion && h.activePotion.expires > Date.now() ? h.activePotion : null;
-          return (
-            <div className="ac-fade">
-              <Section title="Inventory">
-                <Card style={{ marginBottom: 12 }}>
-                  <div style={{ display:'flex', gap: 16, flexWrap:'wrap' }}>
-                    <div>🥚 <strong>{h.inventory.eggs}</strong> Eggs</div>
-                    <div>🐾 <strong>{h.inventory.pets.length}</strong> Pets</div>
-                    <div>🧪 <strong>{h.inventory.potions.reduce((s,p)=>s+p.quantity,0)}</strong> Potions</div>
-                  </div>
-                </Card>
-                <Section title="Potions">
-                  {activePot && (
-                    <Card style={{ marginBottom: 12, borderColor: S.pink }}>
-                      <div style={{ fontSize: 11, color: S.muted }}>ACTIVE</div>
-                      <div style={{ fontSize: 14, fontWeight: 700 }}>{POTIONS[activePot.type].emoji} {POTIONS[activePot.type].name}</div>
-                      <div style={{ fontSize: 11, color: S.muted }}>{fmtTime(activePot.expires - Date.now())} left</div>
-                    </Card>
-                  )}
-                  {h.inventory.potions.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No potions. Earn from quests and milestones.</div></Card> : (
-                    <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))' }}>
-                      {h.inventory.potions.map((inv, i) => {
-                        const def = POTIONS[inv.type];
-                        return (
-                          <Card key={i}>
-                            <div style={{ fontSize: 28, marginBottom: 4 }}>{def.emoji}</div>
-                            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{def.name}</div>
-                            <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>{def.desc}</div>
-                            <div style={{ fontSize: 10, color: S.muted }}>Quantity: {inv.quantity}</div>
-                            <button className="ac-btn ac-btn-primary" style={{ width:'100%', marginTop: 8, fontSize: 11, padding:'6px' }} disabled={!!activePot} onClick={() => { onUsePotion(inv.type); toast(`Used ${def.name}`); }}>Use</button>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </Section>
-              </Section>
-            </div>
-          );
-        }
-
-        // ============================================================
-        // PROFILE
-        // ============================================================
-        function ProfileTab({ state, catalog, lbXP, lbTP, onRename }) {
-          const h = state.human;
-          const me = catalog.find(p => p.id === 'human');
-          const titleIdx = computeTitleIdx(h.xp);
-          const xpRank = lbXP.find(r => r.id === 'human')?.rank;
-          const tpRank = lbTP.find(r => r.id === 'human')?.rank;
-          const tier = lbTP.find(r => r.id === 'human')?.tier || 'LT4';
-          const [nameEdit, setNameEdit] = useState(me.name);
-          const [editing, setEditing] = useState(false);
-          const days = [];
-          for (let i = 59; i >= 0; i--) {
-            const d = new Date(); d.setDate(d.getDate() - i);
-            const k = todayKey(d);
-            days.push({ key: k, xp: h.dailyXpLog[k] || 0 });
-          }
-          const maxXp = Math.max(1, ...days.map(d => d.xp));
-          return (
-            <div className="ac-fade">
-              <Card style={{ marginBottom: 16, background: `linear-gradient(135deg, ${S.panel} 0%, ${TITLE_COLORS[titleIdx].primary}11 100%)` }}>
-                <div style={{ display:'flex', gap: 16, alignItems:'center', flexWrap:'wrap' }}>
-                  <div style={{ width: 80, height: 80, borderRadius: 20, background: `linear-gradient(135deg, ${TITLE_COLORS[titleIdx].primary}, ${TITLE_COLORS[titleIdx].secondary})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize: 36, fontWeight: 800, color: S.bg }}>{me.name[0]}</div>
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    {editing ? (
-                      <div className="ac-row" style={{ gap: 8 }}>
-                        <input className="ac-input" value={nameEdit} onChange={e => setNameEdit(e.target.value)} maxLength={30} />
-                        <button className="ac-btn ac-btn-primary" onClick={() => { onRename(nameEdit || me.name); setEditing(false); }}>Save</button>
-                      </div>
-                    ) : (
-                      <div>
-                        <div style={{ fontSize: 22, fontWeight: 800, display:'flex', alignItems:'center', gap: 8 }}>{me.name}<YouBadge /></div>
-                        <div style={{ fontSize: 12, color: S.muted }}>@{me.username} · {me.nationality}</div>
-                      </div>
-                    )}
-                    <div style={{ marginTop: 8, display:'flex', gap: 6, flexWrap:'wrap' }}>
-                      <span className="ac-pill" style={{ background: TITLE_COLORS[titleIdx].primary+'22', color: TITLE_COLORS[titleIdx].primary }}>{TITLES[titleIdx]}</span>
-                      <span className="ac-pill" style={{ background: TIER_INFO[tier].color+'22', color: TIER_INFO[tier].color }}>{tier}</span>
-                    </div>
-                    {!editing && <button className="ac-btn" style={{ marginTop: 8, fontSize: 11, padding:'4px 10px' }} onClick={() => setEditing(true)}>Edit Name</button>}
-                  </div>
-                </div>
-              </Card>
-              <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: 16 }}>
-                <Card><div style={{ fontSize: 11, color: S.muted }}>XP RANK</div><div style={{ fontSize: 24, fontWeight: 800, color: S.lavender }}>#{xpRank}</div></Card>
-                <Card><div style={{ fontSize: 11, color: S.muted }}>TP RANK</div><div style={{ fontSize: 24, fontWeight: 800, color: S.gold }}>#{tpRank}</div></Card>
-                <Card><div style={{ fontSize: 11, color: S.muted }}>HIGHEST TIER</div><div style={{ fontSize: 24, fontWeight: 800, color: TIER_INFO[h.highestTier].color }}>{h.highestTier}</div></Card>
-                <Card><div style={{ fontSize: 11, color: S.muted }}>HIGHEST COMBO</div><div style={{ fontSize: 24, fontWeight: 800, color: S.pink }}>{h.highestCombo}</div></Card>
-              </div>
-              <Card style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Career Statistics</div>
-                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
-                  {[
-                    ['Total Tasks', h.tasksCompleted], ['Assignments', h.assignmentsCompleted],
-                    ['Recalled Pages', h.recalledPages], ['Numerical Problems', h.numericalProblems],
-                    ['Definitions', h.definitionsRecalled], ['Mock Tests', h.mockTestsCompleted],
-                    ['Avg Mock', h.mockTestsCompleted ? Math.round((h.mockScoreSum / h.mockTestsCompleted) * 100) + '%' : '—'],
-                    ['Tournaments', h.tournamentsJoined], ['Wins', h.tournamentVictories],
-                    ['Pets', h.inventory.pets.length], ['Streak', h.streak], ['Longest', h.longestStreak]
-                  ].map(([label, val], i) => (
-                    <div key={i} style={{ background: S.bg2, borderRadius: 8, padding: 10 }}>
-                      <div style={{ fontSize: 10, color: S.muted }}>{label}</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{val}</div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-              <Card>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Last 60 Days Activity</div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(20, 1fr)', gap: 3 }}>
-                  {days.map(d => {
-                    const intensity = d.xp === 0 ? 0 : clamp(d.xp / maxXp, 0.15, 1);
-                    return <div key={d.key} title={`${d.key}: ${d.xp} XP`} style={{ aspectRatio: '1', borderRadius: 3, background: d.xp > 0 ? `rgba(196,181,253,${intensity})` : S.bg2, border: `1px solid ${S.border}` }} />;
-                  })}
-                </div>
-              </Card>
-            </div>
-          );
-        }
-
-        // ============================================================
-        // HISTORY
-        // ============================================================
-        function HistoryTab({ state }) {
-          const h = state.human;
-          const history = [...h.careerHistory].reverse().slice(0, 200);
-          const icFor = (type) => ({ task:'📚', tournament_win:'🏆', tournament:'🎯', title:'⭐', pet:'🐾', tier:'🏅', quest:'🎁' }[type] || '•');
-          return (
-            <div className="ac-fade">
-              <Section title="Career History" sub="Recent milestones">
-                <Card>
-                  {history.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No history yet.</div> : (
-                    <div style={{ maxHeight: 600, overflowY: 'auto' }}>
-                      {history.map((e, i) => (
-                        <div key={i} style={{ display:'flex', gap: 12, padding: '10px 0', borderBottom: i<history.length-1?`1px solid ${S.border}`:'none' }}>
-                          <div style={{ fontSize: 20 }}>{icFor(e.type)}</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13 }}>
-                              {e.type === 'task' && <>{e.taskId ? e.taskId.replace(/_/g,' ') : 'Task'} <span style={{ color: S.lavender, fontWeight: 700 }}>+{e.xp} XP</span></>}
-                              {e.type === 'tournament_win' && <><strong style={{ color: S.gold }}>Won {e.note}</strong> · +{fmtTp(e.tp)} TP</>}
-                              {e.type === 'tournament' && <>{e.note} · +{fmtTp(e.tp)} TP</>}
-                              {e.type === 'title' && <><strong>Title unlocked: {e.title}</strong></>}
-                              {e.type === 'pet' && <>{e.note}</>}
-                              {e.type === 'tier' && <><strong>{e.note}</strong></>}
-                              {e.type === 'quest' && <>{e.note}</>}
-                            </div>
-                            <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>{new Date(e.ts).toLocaleString()}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </Section>
-            </div>
-          );
-        }
-
-        // ============================================================
-        // MAIN APP
-        // ============================================================
-        const TABS = [
-          { id:'dashboard', label:'Dashboard', icon:'🏠' },
-          { id:'assignments', label:'Assignments', icon:'📐' },
-          { id:'studying', label:'Studying', icon:'📚' },
-          { id:'mocks', label:'Mock Tests', icon:'📝' },
-          { id:'tournaments', label:'Tournaments', icon:'🏆' },
-          { id:'quests', label:'Quests', icon:'🎯' },
-          { id:'leaderboards', label:'Leaderboards', icon:'📊' },
-          { id:'pets', label:'Pets', icon:'🐾' },
-          { id:'inventory', label:'Inventory', icon:'🎒' },
-          { id:'profile', label:'Profile', icon:'👤' },
-          { id:'history', label:'History', icon:'📜' },
-        ];
-
-        function App() {
-          const [loaded, setLoaded] = useState(false);
-          const [tab, setTab] = useState('dashboard');
-          const [toast, setToast] = useState(null);
-          const [, forceUpdate] = useState(0);
-          const [saveModal, setSaveModal] = useState(false);
-          const [welcomeBack, setWelcomeBack] = useState(null);
-          const [savedStatus, setSavedStatus] = useState(null);
-          const catalogRef = useRef(null);
-          const stateRef = useRef(null);
-          const [lbTick, setLbTick] = useState(0);
-
-          const bump = useCallback(() => { forceUpdate(v => v+1); setLbTick(v => v+1); }, []);
-          const toastMsg = useCallback((msg) => setToast(msg), []);
-
-          useEffect(() => {
-            injectStyles();
-            const catalog = buildCatalog();
-            catalogRef.current = catalog;
-            let state = loadState(catalog);
-            const isNew = !state;
-            if (!state) state = initState(catalog);
-
-            const prevTick = state.lastTick || Date.now();
-            const elapsedAway = Date.now() - prevTick;
-
-            state = runTick(state, catalog, isNew);
-            stateRef.current = state;
-            saveState(state);
-
-            if (!isNew && elapsedAway > 5 * 60 * 1000) {
-              setWelcomeBack(elapsedAway);
-            }
-
-            setLoaded(true);
-
-            const saveIv = setInterval(() => {
-              if (stateRef.current) {
-                const ok = saveState(stateRef.current);
-                setSavedStatus(ok ? Date.now() : 'failed');
-              }
-            }, 20000);
-
-            const tickIv = setInterval(() => {
-              if (!stateRef.current) return;
-              runTick(stateRef.current, catalogRef.current, false);
-              bump();
-            }, 30000);
-
-            const renderIv = setInterval(() => { bump(); }, 1000);
-
-            return () => { clearInterval(saveIv); clearInterval(tickIv); clearInterval(renderIv); };
-          }, []);
-
-          const update = useCallback((fn) => {
-            if (!stateRef.current) return;
-            fn(stateRef.current);
-            const ok = saveState(stateRef.current);
-            setSavedStatus(ok ? Date.now() : 'failed');
-            bump();
-          }, []);
-
-          const handleComplete = useCallback((type, id, baseXp, extra) => {
-            let xp = 0;
-            update(s => { xp = doCompleteTask(s, catalogRef.current, type, id, baseXp, extra); });
-            return xp;
-          }, [update]);
-
-          const handleJoin = useCallback((tid) => {
-            let ok = false;
-            update(s => { ok = joinTournament(s, tid); });
-            return ok;
-          }, [update]);
-
-          const handleHatch = useCallback(() => {
-            let pet = null;
-            update(s => { pet = hatchEgg(s); });
-            return pet;
-          }, [update]);
-
-          const handleEquip = useCallback((id) => {
-            update(s => { s.human.equippedPet = s.human.equippedPet === id ? null : id; });
-          }, [update]);
-
-          const handleUsePotion = useCallback((type) => {
-            update(s => {
-              const idx = s.human.inventory.potions.findIndex(p => p.type === type);
-              if (idx < 0) return;
-              const inv = s.human.inventory.potions[idx];
-              if (inv.quantity <= 0) return;
-              const def = POTIONS[type];
-              inv.quantity -= 1;
-              if (inv.quantity <= 0) s.human.inventory.potions.splice(idx, 1);
-              s.human.activePotion = { type, expires: Date.now() + def.dur };
-            });
-          }, [update]);
-
-          const handleClaim = useCallback((period, quest) => {
-            update(s => {
-              const h = s.human;
-              const claimed = period === 'daily' ? h.quests.daily.claimed : h.quests.weekly.claimed;
-              if (claimed[quest.id]) return;
-              claimed[quest.id] = true;
-              h.xp += quest.reward.xp;
-              if (quest.reward.egg) h.inventory.eggs += quest.reward.egg;
-              h.careerHistory.push({ ts: Date.now(), type: 'quest', note: `Quest ${quest.name}` });
-            });
-          }, [update]);
-
-          const handleRename = useCallback((newName) => {
-            update(s => {
-              const me = catalogRef.current.find(p => p.id === 'human');
-              if (me) me.name = newName;
-            });
-          }, [update]);
-
-          const handleExport = useCallback(() => {
-            try {
-              const data = JSON.stringify(stateRef.current, null, 2);
-              const blob = new Blob([data], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `academia-save-${todayKey()}.json`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
-              toastMsg('💾 Save exported to file!');
-            } catch (e) {
-              toastMsg('Export failed: ' + e.message);
-            }
-          }, [toastMsg]);
-
-          const handleImport = useCallback((file) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              try {
-                const data = JSON.parse(e.target.result);
-                if (!data || data.version !== STATE_VERSION) throw new Error('Incompatible save version');
-                if (!data.human || !data.ai) throw new Error('Invalid save data');
-                const defaults = initHumanState();
-                data.human = { ...defaults, ...data.human };
-                if (!data.tournaments) data.tournaments = {};
-                stateRef.current = data;
-                saveState(data);
-                setSaveModal(false);
-                bump();
-                toastMsg('✅ Save loaded! Welcome back.');
-                const elapsed = Date.now() - (data.lastTick || Date.now());
-                if (elapsed > 5 * 60 * 1000) setWelcomeBack(elapsed);
-              } catch (err) {
-                toastMsg('Import failed: ' + err.message);
-              }
-            };
-            reader.readAsText(file);
-          }, [bump, toastMsg]);
-
-          const catalog = catalogRef.current;
-          const state = stateRef.current;
-
-          const lbXP = useMemo(() => state ? buildXPLeaderboard(state, catalog) : [], [state?.human.xp, state?.ai, lbTick, catalog]);
-          const lbTP = useMemo(() => state ? buildTPLeaderboard(state, catalog) : [], [state?.human.tp, state?.ai, lbTick, catalog]);
-
-          if (!loaded || !catalog || !state) {
-            return <div style={{ padding: 40, textAlign:'center', color: S.muted }}>Loading Academia...</div>;
-          }
-
-          const lastSave = savedStatus === 'failed' ? 'Storage unavailable' : new Date(state.lastSave || Date.now()).toLocaleTimeString();
-
-          return (
-            <div style={{ minHeight:'100vh', background: S.bg }}>
-              <div style={{ background: S.bg2, borderBottom: `1px solid ${S.border}`, padding: '12px 20px', position:'sticky', top: 0, zIndex: 100 }}>
-                <div style={{ maxWidth: 1200, margin:'0 auto', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap: 10 }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, letterSpacing:'-0.5px', background: `linear-gradient(135deg, ${S.lavender}, ${S.pink}, ${S.gold})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>ACADEMIA</div>
-                    <div style={{ fontSize: 10, color: S.muted, letterSpacing: 1, fontWeight: 600, display: 'none' }}>1000 PLAYER COMPETITION</div>
-                  </div>
-                  <div style={{ display:'flex', gap: 12, alignItems:'center', fontSize: 12, flexWrap:'wrap' }}>
-                    <div><span style={{ color: S.muted }}>XP:</span> <strong style={{ color: S.lavender }}>{fmtInt(state.human.xp)}</strong></div>
-                    <div><span style={{ color: S.muted }}>TP:</span> <strong style={{ color: S.gold }}>{fmtTp(state.human.tp)}</strong></div>
-                    <div><span style={{ color: S.muted }}>Combo:</span> <strong style={{ color: S.pink }}>{state.human.combo}×</strong></div>
-                    <button className="ac-btn ac-btn-primary" style={{ padding:'8px 14px', fontSize: 12 }} onClick={() => setSaveModal(true)}>
-                      💾 Save
-                    </button>
-                  </div>
-                </div>
-                <div style={{ maxWidth: 1200, margin:'4px auto 0', fontSize: 10, color: S.muted, textAlign:'right', display:'none' }}>
-                  Auto-saved: {lastSave}
-                </div>
-              </div>
-
-              <div style={{ background: S.bg, borderBottom: `1px solid ${S.border}`, position:'sticky', top: 56, zIndex: 99 }}>
-                <div style={{ maxWidth: 1200, margin:'0 auto', padding:'8px 12px', display:'flex', gap: 4, overflowX:'auto' }}>
-                  {TABS.map(t => (
-                    <button key={t.id} className={`ac-tab ${tab===t.id?'active':''}`} onClick={() => setTab(t.id)}>
-                      <span style={{ marginRight: 4 }}>{t.icon}</span>{t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ maxWidth: 1200, margin:'0 auto', padding:'20px 16px 60px' }}>
-                {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onNav={setTab} />}
-                {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />}
-                {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />}
-                {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />}
-                {tab === 'tournaments' && <TournamentsTab state={state} catalog={catalog} onJoin={handleJoin} toast={toastMsg} />}
-                {tab === 'quests' && <QuestsTab state={state} onClaim={handleClaim} toast={toastMsg} />}
-                {tab === 'leaderboards' && <LeaderboardTab state={state} catalog={catalog} />}
-                {tab === 'pets' && <PetsTab state={state} onHatch={handleHatch} onEquip={handleEquip} toast={toastMsg} />}
-                {tab === 'inventory' && <InventoryTab state={state} onUsePotion={handleUsePotion} toast={toastMsg} />}
-                {tab === 'profile' && <ProfileTab state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onRename={handleRename} />}
-                {tab === 'history' && <HistoryTab state={state} />}
-              </div>
-
-              {saveModal && <SaveModal state={state} onExport={handleExport} onImport={handleImport} onClose={() => setSaveModal(false)} />}
-              {welcomeBack !== null && <WelcomeBack elapsedMs={welcomeBack} onClose={() => setWelcomeBack(null)} />}
-              <Toast msg={toast} onDone={() => setToast(null)} />
-            </div>
-          );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+                        const isEquipped = h.equipped
