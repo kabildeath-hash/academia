@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Academia - 1000 Player Competition</title>
+    <style>
+        body, html { margin: 0; padding: 0; background-color: #08080c; overscroll-behavior: none; }
+    </style>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        // ============================================================
+        // UTILITIES
+        // ============================================================
+        const mulberry32 = a => () => { a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
+        const shuffle = (arr, rng) => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+        const pick = (rng, arr) => arr[Math.floor(rng()*arr.length)];
+        const randInt = (rng, a, b) => Math.floor(rng()*(b-a+1))+a;
+        const rand = (rng, a, b) => rng()*(b-a)+a;
+        const round2 = n => Math.round(n*100)/100;
+        const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+        const hashStr = s => { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return h; };
+        const todayKey = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const weekKey = (d=new Date()) => { const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-t.getDay()); return todayKey(t); };
+        const fmtInt = n => Math.floor(n).toLocaleString('en-US');
+        const fmtShort = n => { n=Math.floor(n); if(n>=1e12)return (n/1e12).toFixed(2)+'T'; if(n>=1e9)return (n/1e9).toFixed(2)+'B'; if(n>=1e6)return (n/1e6).toFixed(2)+'M'; if(n>=1e3)return (n/1e3).toFixed(1)+'K'; return n.toString(); };
+        const fmtTp = n => n.toFixed(2);
+        const fmtTime = (ms) => { const s=Math.max(0,Math.floor(ms/1000)); const d=Math.floor(s/86400); const h=Math.floor((s%86400)/3600); const m=Math.floor((s%3600)/60); if(d>0) return `${d}d ${h}h`; if(h>0) return `${h}h ${m}m`; if(m>0) return `${m}m ${s%60}s`; return `${s}s`; };
+        const fmtTime12 = ms => new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
+        // ============================================================
+        // NAMES
+        // ============================================================
+        const FIRSTS = {
+          jp:['Akira','Haruto','Yuki','Sora','Ren','Hikaru','Kaito','Riku','Yuto','Sota','Daiki','Ryo','Kenta','Sho','Takeru','Yuma','Takumi','Itsuki','Kazuki','Naoki','Hiroshi','Tatsuya','Masato','Satoshi','Hayato','Shun','Kosei','Yosuke','Keita','Mitsuki','Hana','Sakura','Yui','Aoi','Rin','Mei','Emi','Kaori','Nanami','Yukino','Akari','Chiyo','Hikari','Honoka','Koharu','Mio','Shizuku','Tsukiko','Kaede','Sayuri'],
+          ru:['Alexei','Dmitri','Ivan','Mikhail','Nikolai','Pavel','Sergei','Vladimir','Yuri','Anton','Boris','Andrei','Kirill','Maxim','Viktor','Oleg','Roman','Sasha','Egor','Fyodor','Lev','Grigori','Igor','Konstantin','Timur','Artem','Bogdan','Denis','Emil','Feodor','Vasily','Arseny','Ilya','Nikita','Stepan','Yaroslav','Zakhar','Daniil','Maksim','Trofim','Anya','Katya','Masha','Natasha','Oksana','Tatiana','Vera','Yulia','Zoya','Lena'],
+          de:['Lukas','Felix','Maximilian','Jonas','Leon','Paul','Elias','Noah','Ben','Finn','Anton','Julian','Moritz','Tobias','Sebastian','Niklas','Alexander','David','Fabian','Simon','Florian','Philipp','Jakob','Matthias','Georg','Heinrich','Karl','Otto','Werner','Klaus','Hans','Friedrich','Johann','Wilhelm','Ludwig','Anna','Lena','Sophie','Marie','Emma','Mia','Clara','Greta','Hannah','Lina','Nora','Zoe','Amelie','Johanna','Erika'],
+          us:['James','Michael','William','Benjamin','Daniel','Ethan','Noah','Liam','Mason','Logan','Lucas','Henry','Jack','Owen','Carter','Wyatt','Julian','Gabriel','Isaac','Caleb','Austin','Connor','Evan','Sean','Ryan','Brandon','Tyler','Justin','Nathan','Zachary','Aaron','Adam','Jared','Kevin','Eric','Ashley','Emma','Olivia','Ava','Sophia','Isabella','Mia','Charlotte','Amelia','Harper','Evelyn','Abigail','Emily','Ella','Grace']
+        };
+        const LASTS = {
+          jp:['Tanaka','Yamamoto','Suzuki','Watanabe','Kobayashi','Nakamura','Sato','Kato','Yoshida','Yamada','Sasaki','Yamaguchi','Matsumoto','Inoue','Kimura','Hayashi','Shimizu','Yamazaki','Mori','Abe','Ikeda','Hashimoto','Ishikawa','Ogawa','Goto','Okada','Hasegawa','Murakami','Kondo','Ito','Saito','Fujita','Endo','Aoki','Sakamoto','Fukuda','Nishimura','Ueda','Miura','Takeda','Nakajima','Kaneko','Nakagawa','Ono','Tamura','Fujii','Kudo','Uchida','Chiba','Ota'],
+          ru:['Ivanov','Smirnov','Kuznetsov','Popov','Vasiliev','Petrov','Sokolov','Mikhailov','Novikov','Fedorov','Morozov','Volkov','Alekseev','Lebedev','Semenov','Egorov','Pavlov','Kozlov','Stepanov','Nikolaev','Orlov','Andreev','Makarov','Nikitin','Zakharov','Zaitsev','Soloviev','Borisov','Yakovlev','Grigoriev','Romanov','Vorobiev','Sergeev','Kuzmin','Frolov','Alexandrov','Dmitriev','Korolev','Gusev','Kiselev','Ilyin','Maksimov','Polyakov','Sorokin','Vinogradov','Kovalev','Belov','Medvedev','Antonov','Tarasov'],
+          de:['Müller','Schmidt','Schneider','Fischer','Weber','Meyer','Wagner','Becker','Schulz','Hoffmann','Koch','Bauer','Richter','Klein','Wolf','Schröder','Neumann','Schwarz','Zimmermann','Braun','Krüger','Hofmann','Hartmann','Lange','Schmitt','Werner','Schmitz','Krause','Meier','Lehmann','Schulze','Köhler','König','Mayer','Huber','Kaiser','Fuchs','Peters','Lang','Scholz','Möller','Weiß','Jung','Hahn','Vogel','Friedrich','Keller','Günther','Frank','Berger'],
+          us:['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez','Gonzalez','Wilson','Anderson','Thomas','Taylor','Moore','Jackson','Martin','Lee','Perez','Thompson','White','Harris','Sanchez','Clark','Ramirez','Lewis','Robinson','Walker','Young','Allen','King','Wright','Scott','Torres','Nguyen','Hill','Flores','Green','Adams','Nelson','Baker','Hall','Rivera','Campbell','Mitchell','Carter','Roberts']
+        };
+        const NAT_NAMES = { jp:'Japanese', ru:'Russian', de:'German', us:'American' };
+        const ORIGINS = ['jp','ru','de','us'];
+
+        // ============================================================
+        // TITLES & TIERS
+        // ============================================================
+        const TITLE_XP = Array.from({length:50},(_,i)=>Math.round(40*Math.pow(i,2.2)));
+        const TITLES = ['Fresh Initiate','Curious Scholar','Diligent Apprentice','Note Keeper','Steady Student','Focused Reader','Rising Pupil','Methodical Mind','Keen Observer','Analytical Mind','Studious Aspirant','Focused Thinker','Committed Scholar','Persistent Learner','Disciplined Mind','Sharp Thinker','Insightful Reader','Advanced Student','Proven Scholar','Distinguished Pupil','Renowned Thinker','Brilliant Student','Academic Virtuoso','Master Scholar','Grand Intellect','Elite Mind','Peerless Scholar','Luminous Thinker','Sage of Studies','Stellar Sage','Celestial Scholar','Astral Mind','Lunar Sage','Solar Virtuoso','Cosmic Intellect','Ethereal Scholar','Transcendent Mind','Ascended Thinker','Apex Scholar','Mythic Intellect','Legendary Scholar','Immortal Sage','Primordial Mind','Ancient Virtuoso','Eternal Scholar','Divine Intellect','Cosmic Sage','Omniscient Mind','Infinite Scholar','Transcendent Entity'];
+        const TITLE_COLORS = TITLES.map((_,i)=>{ const hue=(i*27)%360; return { primary:`hsl(${hue},60%,72%)`, secondary:`hsl(${(hue+40)%360},60%,55%)` }; });
+        const TIER_INFO = {
+          HT1:{color:'#f5d78e'}, LT1:{color:'#c4b5fd'}, HT2:{color:'#f5b3d3'}, LT2:{color:'#e5a8c8'},
+          HT3:{color:'#a5c9e8'}, LT3:{color:'#93b9d8'}, HT4:{color:'#a8e6cf'}, LT4:{color:'#8fd9b8'}
+        };
+
+        // ============================================================
+        // PETS, POTIONS, TOURNAMENTS, TASKS
+        // ============================================================
+        const EGGS = [
+          { id:'dawn', name:'Dawn Egg', pets:[
+            { name:'Pip', emoji:'🌱', rar:'Common', ab:'xp_assign', val:0.015, flavor:'A tiny sprout that believes in small steps.' },
+            { name:'Mint', emoji:'☁️', rar:'Uncommon', ab:'xp_recall', val:0.025, flavor:'A cloud who remembers everything.' },
+            { name:'Dawn', emoji:'🦊', rar:'Rare', ab:'xp_all', val:0.04, flavor:'A fox whose tail is the color of first light.' },
+            { name:'Aura', emoji:'🦅', rar:'Epic', ab:'xp_all', val:0.07, flavor:'A bird that circles the mind of scholars.' },
+            { name:'Sol', emoji:'🕊️', rar:'Super Rare', ab:'xp_all', val:0.12, flavor:'A phoenix born from the first sunrise.' }
+          ]},
+          { id:'bloom', name:'Bloom Egg', pets:[
+            { name:'Blossom', emoji:'🌷', rar:'Common', ab:'xp_assign', val:0.015, flavor:'Opens only for those who kept studying.' },
+            { name:'Breeze', emoji:'🍃', rar:'Uncommon', ab:'xp_study', val:0.025, flavor:'Carries focus on the wind.' },
+            { name:'Clover', emoji:'🍀', rar:'Rare', ab:'xp_all', val:0.04, flavor:'A lucky rabbit.' },
+            { name:'Rosie', emoji:'🌹', rar:'Epic', ab:'xp_mock', val:0.09, flavor:'A rose spirit that blooms for mock tests.' },
+            { name:'Elysia', emoji:'🌺', rar:'Super Rare', ab:'xp_all', val:0.13, flavor:'A legendary bloom who once tutored an empress.' }
+          ]},
+          { id:'lunar', name:'Lunar Egg', pets:[
+            { name:'Luna', emoji:'🐈', rar:'Common', ab:'xp_assign', val:0.018, flavor:'A cat whose eyes are little moons.' },
+            { name:'Mochi', emoji:'🐇', rar:'Uncommon', ab:'xp_recall', val:0.03, flavor:'A bunny who memorizes everything.' },
+            { name:'Stella', emoji:'⭐', rar:'Rare', ab:'xp_all', val:0.045, flavor:'A star who fell in love with studying.' },
+            { name:'Nyx', emoji:'🌌', rar:'Epic', ab:'xp_study', val:0.1, flavor:'A galaxy spirit who concentrates focus.' },
+            { name:'Selene', emoji:'🌙', rar:'Super Rare', ab:'xp_all', val:0.14, flavor:'The moon-touched guardian of deep recall.' }
+          ]},
+          { id:'crystal', name:'Crystal Egg', pets:[
+            { name:'Shard', emoji:'💠', rar:'Common', ab:'xp_assign', val:0.02, flavor:'A shard that sharpens discipline.' },
+            { name:'Icy', emoji:'❄️', rar:'Uncommon', ab:'xp_study', val:0.032, flavor:'A flake that never melts.' },
+            { name:'Glacia', emoji:'🧊', rar:'Rare', ab:'xp_all', val:0.048, flavor:'A crystal golem with a scholar\'s patience.' },
+            { name:'Prism', emoji:'🔮', rar:'Epic', ab:'xp_mock', val:0.1, flavor:'A prism that clarifies every question.' },
+            { name:'Azura', emoji:'💎', rar:'Super Rare', ab:'xp_all', val:0.15, flavor:'A diamond-bodied dragon of pure focus.' }
+          ]},
+          { id:'astral', name:'Astral Egg', pets:[
+            { name:'Zephyr', emoji:'🌬️', rar:'Common', ab:'xp_assign', val:0.022, flavor:'A wisp that studies in silence.' },
+            { name:'Aria', emoji:'🎵', rar:'Uncommon', ab:'xp_recall', val:0.035, flavor:'A note that hums lessons awake.' },
+            { name:'Nimbus', emoji:'☁️', rar:'Rare', ab:'xp_all', val:0.05, flavor:'A storm that condenses knowledge.' },
+            { name:'Vega', emoji:'✨', rar:'Epic', ab:'xp_all', val:0.085, flavor:'A star spirit of singular purpose.' },
+            { name:'Cosmo', emoji:'🪐', rar:'Super Rare', ab:'xp_all', val:0.16, flavor:'A planet-bound familiar of scholars of old.' }
+          ]},
+          { id:'nova', name:'Nova Egg', pets:[
+            { name:'Spark', emoji:'⚡', rar:'Common', ab:'xp_assign', val:0.025, flavor:'A spark that ignites early mornings.' },
+            { name:'Flare', emoji:'🔥', rar:'Uncommon', ab:'xp_study', val:0.04, flavor:'A flame that refuses to be extinguished.' },
+            { name:'Ember', emoji:'🕯️', rar:'Rare', ab:'xp_all', val:0.055, flavor:'A candle burning at both ends.' },
+            { name:'Phoenix', emoji:'🔥', rar:'Epic', ab:'xp_all', val:0.09, flavor:'A rebirth of pure academic ambition.' },
+            { name:'Nova', emoji:'💥', rar:'Super Rare', ab:'xp_all', val:0.18, flavor:'The supernova that ended an age of mediocrity.' }
+          ]}
+        ];
+        const RARITY_WEIGHTS = [['Common',0.5],['Uncommon',0.25],['Rare',0.15],['Epic',0.09],['Super Rare',0.01]];
+        const RARITY_COLORS = { 'Common':'#a8e6cf','Uncommon':'#a5c9e8','Rare':'#c4b5fd','Epic':'#f5b3d3','Super Rare':'#f5d78e' };
+
+        const POTIONS = {
+          double_xp: { name:'Double XP Potion', emoji:'🧪', desc:'2x XP for 10 minutes.', dur:10*60*1000 },
+          combo_craze: { name:'Combo Craze Potion', emoji:'🌀', desc:'Halves combo threshold for 15 minutes.', dur:15*60*1000 },
+          golden_study: { name:'Golden Study Potion', emoji:'✨', desc:'+50% XP for 20 minutes.', dur:20*60*1000 },
+          scholars_fortune: { name:'Scholar\'s Fortune', emoji:'🍀', desc:'Doubles egg rarity luck.', dur:60*60*1000 },
+          streak_protector: { name:'Streak Protector', emoji:'🛡️', desc:'Protects streak from one missed day.', dur:60*60*1000 }
+        };
+
+        const DAILY_NAMES = ['Dawn Sprint','Midday Clash','Lumen Cup','Vesper Trials','Starlit Sprint'];
+        const MAJOR_NAMES = ['Grand Academic Open','Solar Invitational','Eclipse Championship','Lunar Masters'];
+        const WEEKLY_NAMES = ['Apex Scholar League','Midnight Grand Prix','Celestial Cup','Arcane Gauntlet'];
+        const MONTHLY_NAMES = ['The Ivory Crown','Grandmaster\'s Gala','Sovereign Tournament','Imperial Scholars Cup'];
+
+        const ASSIGNMENT_TASKS = [
+          { id:'math_page', name:'Mathematics Page', desc:'1 page of Mathematics assignment', xp:1, icon:'📐' },
+          { id:'english_page', name:'English Page', desc:'1 page of English assignment', xp:2, icon:'📖' },
+          { id:'physics_page', name:'Advanced Physics Page', desc:'1 page of Advanced Physics', xp:2, icon:'⚛️' },
+          { id:'highlevel_page', name:'Extra High-Level Page', desc:'1 page of Extra High-Level assignment', xp:3, icon:'🎓' },
+          { id:'project_hour', name:'Project Work', desc:'1 hour of project work', xp:30, icon:'🛠️', long:true }
+        ];
+        const STUDY_TASKS = [
+          { id:'recall_page', name:'Recall a Page', desc:'Recall 1 page worth of information', xp:5, icon:'📄' },
+          { id:'recall_problem', name:'Recall a Numerical Problem', desc:'Recall 1 numerical problem', xp:10, icon:'🧮' },
+          { id:'recall_defs', name:'Recall 5 Definitions', desc:'Recall 5 definitions', xp:20, icon:'📚' }
+        ];
+        const MOCK_TESTS = [
+          { id:'mock_75', name:'75-Mark Mock Test', desc:'15 questions · need >80% (61/75)', xp:500, marks:75, questions:15 },
+          { id:'mock_38', name:'38-Mark Mock Test', desc:'10 questions · need >80% (31/38)', xp:250, marks:38, questions:10 }
+        ];
+
+        const MOCK_BANK = [
+          { q:'What is the derivative of sin(x)?', opts:['cos(x)','-cos(x)','sin(x)','-sin(x)'], a:0 },
+          { q:'∫ 1/x dx equals:', opts:['x + C','ln|x| + C','1/x² + C','e^x + C'], a:1 },
+          { q:'The limit of (sin x)/x as x→0 is:', opts:['0','1','∞','undefined'], a:1 },
+          { q:'SI unit of electrical resistance?', opts:['Volt','Ohm','Ampere','Watt'], a:1 },
+          { q:'Speed of light ≈:', opts:['3×10⁶ m/s','3×10⁸ m/s','3×10¹⁰ m/s','3×10⁴ m/s'], a:1 },
+          { q:'Newton\'s second law:', opts:['F = ma','E = mc²','P = IV','v = u + at'], a:0 },
+          { q:'Past participle of "to write":', opts:['wrote','written','writ','writes'], a:1 },
+          { q:'"She ___ to the library yesterday."', opts:['go','goes','went','gone'], a:2 },
+          { q:'Synonym for "ubiquitous":', opts:['rare','omnipresent','hidden','small'], a:1 },
+          { q:'Matrix [[1,0],[0,1]] is:', opts:['Zero','Identity','Inverse','Diagonal'], a:1 },
+          { q:'e^(iπ) + 1 =', opts:['0','1','-1','i'], a:0 },
+          { q:'Particle with no electric charge:', opts:['Proton','Electron','Neutron','Positron'], a:2 },
+          { q:'Sum of interior angles of a triangle:', opts:['90°','180°','270°','360°'], a:1 },
+          { q:'"Ephemeral" means:', opts:['everlasting','short-lived','spacious','fragrant'], a:1 },
+          { q:'Work done by perpendicular force:', opts:['Maximum','Zero','Negative','Infinite'], a:1 }
+        ];
+        const RECALL_PASSAGES = [
+          { passage:'Mitochondria are membrane-bound organelles. Often called the "powerhouse of the cell," they generate most of the cell\'s ATP.', q:'What molecule do mitochondria primarily produce?', opts:['DNA','ATP','RNA','Glucose'], a:1 },
+          { passage:'The Krebs cycle (citric acid cycle) is a series of reactions used by aerobic organisms to release stored energy through acetyl-CoA oxidation.', q:'What is the Krebs cycle also called?', opts:['Citric acid cycle','Glycolysis','Calvin cycle','Pentose cycle'], a:0 },
+          { passage:'In linear algebra, the determinant of [[a,b],[c,d]] is ad − bc. A matrix is invertible if and only if its determinant is nonzero.', q:'When is a 2×2 matrix invertible?', opts:['When determinant = 0','When determinant ≠ 0','When trace = 0','Always'], a:1 },
+          { passage:'The photoelectric effect is emission of electrons when EM radiation hits a material. Einstein explained it via quanta of energy called photons.', q:'Quanta of light are called?', opts:['Electrons','Protons','Photons','Neutrinos'], a:2 },
+          { passage:'The subjunctive mood expresses wishes, hypotheticals, or demands. "If I were you" uses the subjunctive form of "to be."', q:'Which sentence uses the subjunctive mood?', opts:['If I was you','If I were you','I am you','I will be you'], a:1 }
+        ];
+        const NUM_PROBLEMS = [
+          { q:'7² − 3² = ?', opts:['40','30','22','16'], a:0 },
+          { q:'2x + 6 = 14. x = ?', opts:['4','5','6','7'], a:0 },
+          { q:'Derivative of x³ at x = 2?', opts:['6','8','12','24'], a:2 },
+          { q:'∫₀³ 2x dx = ?', opts:['6','9','12','18'], a:1 },
+          { q:'√(3² + 4²) = ?', opts:['3','4','5','7'], a:2 },
+          { q:'sin(π/2) = ?', opts:['0','1','-1','1/2'], a:1 },
+          { q:'15% of 200 = ?', opts:['20','25','30','35'], a:2 },
+          { q:'x² − 5x + 6 = 0', opts:['x=1,6','x=2,3','x=-2,-3','x=0,5'], a:1 }
+        ];
+        const DEF_SET = [
+          { term:'Derivative', def:'The rate of change of a function.' },
+          { term:'Integral', def:'The accumulation of quantities, area under a curve.' },
+          { term:'Matrix', def:'A rectangular array of numbers.' },
+          { term:'Vector', def:'A quantity with magnitude and direction.' },
+          { term:'Eigenvalue', def:'Scalar λ such that Av = λv for nonzero v.' },
+          { term:'Photon', def:'A quantum of electromagnetic radiation.' },
+          { term:'Entropy', def:'A measure of disorder in a system.' },
+          { term:'Momentum', def:'The product of mass and velocity.' },
+          { term:'Catalyst', def:'Speeds reaction without being consumed.' },
+          { term:'Osmosis', def:'Movement of solvent across a semipermeable membrane.' }
+        ];
+
+        // ============================================================
+        // VIPs
+        // ============================================================
+        const VIP_DEFS = [
+          { name:'Doroteya Graves', nat:'Russian', age:24, status:'University', spec:'Advanced Mathematics', personality:'Perfectionist', vipTier:'A', arch:'Perfectionist', bio:'The silent standard-bearer. Studies in cathedral silences.', sigBadge:'Obsidian Seal', initXP:[180000,220000], rate:[1400,1800] },
+          { name:'Iris Fujiwara', nat:'Japanese', age:22, status:'University', spec:'Theoretical Physics', personality:'Burst Grinder', vipTier:'A', arch:'Burst Grinder', bio:'Fluent in elegant sprints of genius. Disappears for days.', sigBadge:'Amethyst Iris', initXP:[170000,210000], rate:[1300,1700] },
+          { name:'Jin Kiyora', nat:'Japanese', age:21, status:'Entrance Exam', spec:'Applied Chemistry', personality:'Tournament Specialist', vipTier:'A', arch:'Tournament Specialist', bio:'A tournament sniper. Rarely studied, always winning.', sigBadge:'Crimson Circuit', initXP:[175000,205000], rate:[1350,1750] },
+          { name:'Xuebi Wang', nat:'Chinese', age:23, status:'University', spec:'Pure Mathematics', personality:'Consistent Scholar', vipTier:'B', arch:'Consistent Scholar', bio:'Quietly accumulates XP the way winter accumulates snow.', sigBadge:'Jade Lantern', initXP:[110000,145000], rate:[800,1100] },
+          { name:'Charles Chevalier', nat:'French', age:26, status:'University', spec:'Philosophy & Mathematics', personality:'Occasional Prodigy', vipTier:'B', arch:'Occasional Prodigy', bio:'Vanishes for weeks, returns having reinvented himself.', sigBadge:'Silver Fleur', initXP:[100000,135000], rate:[750,1000] },
+          { name:'Dawn Murasaki', nat:'Japanese', age:20, status:'Entrance Exam', spec:'English Literature', personality:'Early Bird', vipTier:'B', arch:'Early Bird', bio:'First light, first page. Studies before the birds.', sigBadge:'Rose Dawn', initXP:[105000,140000], rate:[780,1050] },
+          { name:'Skyla Ravencroft', nat:'American', age:25, status:'University', spec:'Astrophysics', personality:'Night Owl', vipTier:'B', arch:'Night Owl', bio:'Sleepless genius. Best work at 3am under desk lamps.', sigBadge:'Obsidian Wing', initXP:[115000,145000], rate:[850,1150] }
+        ];
+
+        const ARCHETYPES = [
+          { id:'consistent', name:'Consistent Scholar', rateMul:[0.7,1.1], varMul:0.2, joinMul:0.9, tComp:1.0 },
+          { id:'burst', name:'Burst Grinder', rateMul:[0.4,1.5], varMul:0.9, joinMul:0.8, tComp:1.0 },
+          { id:'tspec', name:'Tournament Specialist', rateMul:[0.5,0.9], varMul:0.4, joinMul:1.6, tComp:1.4 },
+          { id:'perfect', name:'Perfectionist', rateMul:[0.8,1.15], varMul:0.15, joinMul:0.85, tComp:1.1 },
+          { id:'night', name:'Night Owl', rateMul:[0.6,1.2], varMul:0.5, joinMul:1.0, tComp:1.0 },
+          { id:'early', name:'Early Bird', rateMul:[0.65,1.1], varMul:0.35, joinMul:1.0, tComp:1.0 },
+          { id:'memo', name:'Memorization Expert', rateMul:[0.6,1.0], varMul:0.3, joinMul:0.6, tComp:1.0 },
+          { id:'assign', name:'Assignment Machine', rateMul:[0.85,1.25], varMul:0.35, joinMul:0.5, tComp:0.9 },
+          { id:'prodigy', name:'Occasional Prodigy', rateMul:[0.3,1.6], varMul:1.0, joinMul:0.7, tComp:1.1 },
+          { id:'unpredictable', name:'Unpredictable Competitor', rateMul:[0.2,1.7], varMul:1.2, joinMul:1.0, tComp:1.0 },
+          { id:'strategist', name:'Competitive Strategist', rateMul:[0.6,1.0], varMul:0.3, joinMul:1.3, tComp:1.25 },
+          { id:'casual', name:'Casual Learner', rateMul:[0.2,0.6], varMul:0.5, joinMul:0.35, tComp:0.8 }
+        ];
+
+        // ============================================================
+        // CATALOG
+        // ============================================================
+        function makeUsername(name, used) {
+          const parts = name.toLowerCase().split(/\s+/);
+          const base = (parts[0][0] + parts[parts.length-1]).replace(/[^a-z]/g,'');
+          let u = base, i = 2;
+          while (used.has(u)) { u = base + i; i++; }
+          used.add(u);
+          return u;
+        }
+
+        function buildCatalog() {
+          const rng = mulberry32(20250101);
+          const players = [];
+          const usedNames = new Set();
+          const usedUsers = new Set();
+          const now = Date.now();
+          const DAY = 86400000;
+
+          VIP_DEFS.forEach((v, i) => {
+            usedNames.add(v.name);
+            const u = makeUsername(v.name, usedUsers);
+            const initXP = Math.floor(rand(rng, v.initXP[0], v.initXP[1]));
+            const rate = Math.floor(rand(rng, v.rate[0], v.rate[1]));
+            const initTP = Math.floor(rand(rng, v.vipTier==='A'?280:140, v.vipTier==='A'?480:280));
+            const tpRate = rand(rng, v.vipTier==='A'?1.4:0.7, v.vipTier==='A'?2.2:1.5);
+            const reg = now - Math.floor(rand(rng, 300, 1200)) * DAY;
+            players.push({
+              id: 'p'+(i+1), name: v.name, username: u, nationality: v.nat, age: v.age,
+              status: v.status, specialization: v.spec, personality: v.personality,
+              vip: true, vipTier: v.vipTier, sigBadge: v.sigBadge, bio: v.bio,
+              registerDate: reg,
+              petCollection: shuffle(EGGS, rng).slice(0, randInt(rng, 2, 4)).map(e => {
+                const pet = pick(rng, e.pets);
+                return { eggId: e.id, petName: pet.name, rarity: pet.rar, acquired: now - randInt(rng,5,200)*DAY };
+              }),
+              aiProfile: {
+                archetype: v.personality, dailyXpAvg: rate, dailyTpAvg: tpRate,
+                variability: v.arch==='Burst Grinder'?0.9 : v.arch==='Perfectionist'?0.15 : v.arch==='Night Owl'?0.5 : 0.4,
+                joinTendency: v.vipTier==='A'?0.85:0.7,
+                tournamentCompetitiveness: v.arch==='Tournament Specialist'?1.5:1.2,
+                initialXP: initXP, initialTP: initTP
+              }
+            });
+          });
+
+          usedNames.add('Aria Nakamura');
+          const humanUser = makeUsername('Aria Nakamura', usedUsers);
+          players.push({
+            id: 'human', name: 'Aria Nakamura', username: humanUser, nationality: 'American', age: 21,
+            status: 'University', specialization: 'Undecided', personality: 'You', vip: false,
+            registerDate: now, petCollection: [], isHuman: true, aiProfile: null
+          });
+
+          let made = players.length;
+          let safety = 0;
+          while (made < 1000 && safety < 100000) {
+            safety++;
+            const origin = ORIGINS[Math.floor(rng()*4)];
+            const first = pick(rng, FIRSTS[origin]);
+            const last = pick(rng, LASTS[origin]);
+            const name = first + ' ' + last;
+            if (usedNames.has(name)) continue;
+            usedNames.add(name);
+            const u = makeUsername(name, usedUsers);
+            const arch = pick(rng, ARCHETYPES);
+            const specPool = ['Mathematics','Physics','Chemistry','Biology','English Literature','Philosophy','Computer Science','Economics','History','Engineering','Neuroscience','Political Science','Music Theory','Linguistics'];
+            const age = randInt(rng, 18, 30);
+            const status = rng() < 0.4 ? 'Entrance Exam' : 'University';
+            const reg = now - Math.floor(rand(rng, 15, 900)) * DAY;
+            const ageFactor = 0.4 + (now - reg) / (900*DAY) * 1.2;
+            const dailyRate = Math.floor(rand(rng, 25, 400) * arch.rateMul[1] * ageFactor / 2 + rand(rng, 10, 200));
+            const accountAgeDays = (now - reg) / DAY;
+            const initXP = Math.max(0, Math.floor(dailyRate * accountAgeDays * rand(rng, 0.5, 1.1)));
+            const initTP = Math.max(0, Math.floor(rand(rng, 0, 80) * (1 + accountAgeDays/300) * arch.joinMul));
+            const tpRate = rand(rng, 0.03, 0.4) * arch.joinMul;
+            players.push({
+              id: 'p'+(made+1), name, username: u, nationality: NAT_NAMES[origin], age, status,
+              specialization: pick(rng, specPool), personality: arch.name, vip: false,
+              registerDate: reg, petCollection: [],
+              aiProfile: {
+                archetype: arch.name, dailyXpAvg: Math.max(20, dailyRate), dailyTpAvg: tpRate,
+                variability: 0.3 + arch.varMul * rand(rng, 0.4, 1.2),
+                joinTendency: clamp(arch.joinMul * rand(rng, 0.4, 1.0), 0.05, 0.95),
+                tournamentCompetitiveness: arch.tComp || rand(rng, 0.7, 1.3),
+                initialXP: initXP, initialTP: initTP
+              }
+            });
+            made++;
+          }
+
+          return players;
+        }
+
+        // ============================================================
+        // STATE
+        // ============================================================
+        const SAVE_KEY = 'academia_save_v1';
+        const STATE_VERSION = 1;
+
+        function initHumanState() {
+          const now = Date.now();
+          return {
+            xp: 0, tp: 0,
+            combo: 0, comboProgress: 0, comboExpiry: 0, highestCombo: 0,
+            streak: 0, longestStreak: 0, lastTaskDay: null,
+            tasksCompleted: 0, assignmentsCompleted: 0,
+            recalledPages: 0, numericalProblems: 0, definitionsRecalled: 0,
+            mockTestsCompleted: 0, mockScoreSum: 0,
+            tournamentsJoined: 0, tournamentVictories: 0,
+            quests: { daily: { date: null, progress: {}, claimed: {} }, weekly: { week: null, progress: {}, claimed: {} } },
+            inventory: { eggs: 0, potions: [], pets: [] },
+            equippedPet: null, activePotion: null,
+            dailyStats: { date: todayKey(), tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, tournamentsJoined: 0, comboMax: 0 },
+            weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, tournamentWins: 0 },
+            careerHistory: [],
+            tournamentJoins: {},
+            tournamentProgress: {},
+            highestTitle: 0, highestTier: 'LT4',
+            tierHistory: [], dailyXpLog: {},
+            customization: { frame:'default', color:'#c4b5fd', badge:null },
+            lastSave: now, lastTick: now
+          };
+        }
+
+        function initState(catalog) {
+          const aiState = {};
+          for (const p of catalog) {
+            if (p.id === 'human') continue;
+            aiState[p.id] = { xp: p.aiProfile.initialXP, tp: p.aiProfile.initialTP };
+          }
+          const human = initHumanState();
+          human.highestTitle = 0;
+          return {
+            version: STATE_VERSION, createdAt: Date.now(), lastTick: Date.now(),
+            human, ai: aiState, tournaments: {}, pendingResolutions: []
+          };
+        }
+
+        function loadState(catalog) {
+          try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return null;
+            const s = JSON.parse(raw);
+            if (!s || s.version !== STATE_VERSION) return null;
+            if (!s.human || !s.ai) return null;
+            const defaults = initHumanState();
+            s.human = { ...defaults, ...s.human };
+            if (!s.tournaments) s.tournaments = {};
+            return s;
+          } catch (e) {
+            console.warn('Save load failed:', e);
+            return null;
+          }
+        }
+
+        function saveState(state) {
+          try {
+            const toSave = { ...state, lastSave: Date.now() };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        // ============================================================
+        // CALCULATIONS
+        // ============================================================
+        function computeTitleIdx(xp) {
+          let idx = 0;
+          for (let i = 0; i < TITLE_XP.length; i++) if (xp >= TITLE_XP[i]) idx = i;
+          return idx;
+        }
+
+        function computeTierForRank(rank) {
+          if (rank <= 125) return 'HT1';
+          if (rank <= 250) return 'LT1';
+          if (rank <= 375) return 'HT2';
+          if (rank <= 500) return 'LT2';
+          if (rank <= 625) return 'HT3';
+          if (rank <= 750) return 'LT3';
+          if (rank <= 875) return 'HT4';
+          return 'LT4';
+        }
+
+        function comboMultiplier(combo) {
+          if (combo <= 0) return 1;
+          if (combo <= 10) return 1 + combo * 0.05;
+          if (combo <= 25) return 1.5 + (combo - 10) * 0.08;
+          if (combo <= 50) return 2.7 + (combo - 25) * 0.12;
+          if (combo <= 100) return 5.7 + (combo - 50) * 0.22;
+          return 16.7 * Math.pow(1.02, combo - 100);
+        }
+
+        function rollPetFromEgg(egg, rng) {
+          const roll = rng();
+          let cum = 0, chosenRarity = 'Common';
+          for (const [r, w] of RARITY_WEIGHTS) {
+            cum += w;
+            if (roll <= cum) { chosenRarity = r; break; }
+          }
+          const candidates = egg.pets.filter(p => p.rar === chosenRarity);
+          return pick(rng, candidates.length ? candidates : egg.pets);
+        }
+
+        function petBonus(human) {
+          if (!human.equippedPet) return { ab:null, val:0, def:null };
+          const pet = human.inventory.pets.find(p => p.instanceId === human.equippedPet);
+          if (!pet) return { ab:null, val:0, def:null };
+          const def = EGGS.flatMap(e => e.pets).find(p => p.name === pet.petName);
+          if (!def) return { ab:null, val:0, def:null };
+          const levelMul = 1 + 0.05 * (pet.level - 1);
+          return { ab: def.ab, val: def.val * levelMul, def };
+        }
+
+        function potionBonus(human) {
+          if (!human.activePotion) return { mult:1, comboDiscount:false };
+          const p = human.activePotion;
+          if (Date.now() > p.expires) return { mult:1, comboDiscount:false };
+          if (p.type === 'double_xp') return { mult:2, comboDiscount:false };
+          if (p.type === 'golden_study') return { mult:1.5, comboDiscount:false };
+          if (p.type === 'combo_craze') return { mult:1, comboDiscount:true };
+          return { mult:1, comboDiscount:false };
+        }
+
+        function calcTaskXp(baseXp, human, taskType) {
+          const comboMult = comboMultiplier(human.combo);
+          const pb = petBonus(human);
+          let petBonusVal = 0;
+          if (pb.def) {
+            if (pb.def.ab === 'xp_all') petBonusVal = pb.val;
+            else if (pb.def.ab === 'xp_assign' && taskType === 'assignment') petBonusVal = pb.val;
+            else if (pb.def.ab === 'xp_study' && taskType === 'study') petBonusVal = pb.val;
+            else if (pb.def.ab === 'xp_recall' && taskType === 'study') petBonusVal = pb.val;
+            else if (pb.def.ab === 'xp_mock' && taskType === 'mock') petBonusVal = pb.val;
+          }
+          const pBonus = potionBonus(human);
+          return Math.max(1, Math.floor(baseXp * comboMult * (1 + petBonusVal) * pBonus.mult));
+        }
+
+        // ============================================================
+        // TOURNAMENTS
+        // ============================================================
+        function generateTournaments(fromDate, days) {
+          const tours = {};
+          const start = new Date(fromDate); start.setHours(0,0,0,0);
+          for (let d = 0; d < days; d++) {
+            const day = new Date(start); day.setDate(day.getDate() + d);
+            const dow = day.getDay();
+            const isSat = dow === 6;
+            const slots = isSat ? [5, 8, 11, 14, 17] : [14, 15, 16, 17.5, 19];
+            const durs = [30, 45, 60, 45, 60];
+            for (let i = 0; i < 5; i++) {
+              const s = new Date(day);
+              s.setHours(Math.floor(slots[i]), Math.round((slots[i]%1)*60), 0, 0);
+              const e = new Date(s.getTime() + durs[i]*60000);
+              tours[`d-${todayKey(day)}-${i}`] = { id:`d-${todayKey(day)}-${i}`, type:'daily', name: DAILY_NAMES[i], start: s.getTime(), end: e.getTime(), baseTP:5, resolved:false, results:null, winner:null };
+            }
+            if (d % 2 === 0) {
+              const s = new Date(day); s.setHours(15, 0, 0, 0);
+              tours[`m-${todayKey(day)}`] = { id:`m-${todayKey(day)}`, type:'major', name: MAJOR_NAMES[Math.floor(d/2) % MAJOR_NAMES.length], start: s.getTime(), end: s.getTime()+180*60000, baseTP:50, resolved:false, results:null, winner:null };
+            }
+            if (dow === 0) {
+              const s = new Date(day); s.setHours(18, 0, 0, 0);
+              tours[`w-${todayKey(day)}`] = { id:`w-${todayKey(day)}`, type:'weekly', name: WEEKLY_NAMES[Math.floor(d/7) % WEEKLY_NAMES.length], start: s.getTime(), end: s.getTime()+240*60000, baseTP:100, resolved:false, results:null, winner:null };
+            }
+            if (day.getDate() === 1) {
+              const s = new Date(day); s.setHours(19, 0, 0, 0);
+              tours[`mo-${day.getFullYear()}-${day.getMonth()}`] = { id:`mo-${day.getFullYear()}-${day.getMonth()}`, type:'monthly', name: MONTHLY_NAMES[day.getMonth() % MONTHLY_NAMES.length], start: s.getTime(), end: s.getTime()+240*60000, baseTP:300, resolved:false, results:null, winner:null };
+            }
+          }
+          return tours;
+        }
+
+        function computeAIParticipants(t, catalog) {
+          const seed = hashStr(t.id);
+          const rng = mulberry32(seed);
+          const durHours = (t.end - t.start) / 3600000;
+          const results = [];
+          for (const p of catalog) {
+            if (p.id === 'human') continue;
+            const prof = p.aiProfile;
+            const joinChance = prof.joinTendency * (t.type === 'daily' ? 0.9 : t.type === 'major' ? 1.1 : t.type === 'weekly' ? 1.2 : 1.3);
+            if (rng() < joinChance) {
+              const baseXP = prof.dailyXpAvg * (durHours / 24) * 2.2;
+              const roll = 0.4 + rng() * (0.6 + prof.variability * 0.8);
+              const comp = prof.tournamentCompetitiveness || 1;
+              results.push({ pid: p.id, xp: Math.floor(baseXP * roll * comp) });
+            }
+          }
+          return results;
+        }
+
+        function resolveTournament(t, catalog, humanProgress) {
+          const participants = computeAIParticipants(t, catalog);
+          const humanXP = humanProgress[t.id];
+          if (typeof humanXP === 'number') participants.push({ pid: 'human', xp: humanXP });
+          participants.sort((a,b) => b.xp - a.xp || a.pid.localeCompare(b.pid));
+          const rewards = {};
+          for (let i = 0; i < participants.length; i++) {
+            rewards[participants[i].pid] = round2(t.baseTP / Math.pow(2, i));
+          }
+          const top20 = participants.slice(0, 20).map(p => ({ pid: p.pid, xp: p.xp, tp: rewards[p.pid] }));
+          return { ...t, resolved: true, results: top20, winner: participants[0]?.pid, participantCount: participants.length, rewards };
+        }
+
+        // ============================================================
+        // SIMULATION
+        // ============================================================
+        function simulateAIs(state, catalog, elapsedMs) {
+          const capped = Math.min(elapsedMs, 7 * 24 * 3600 * 1000);
+          if (capped <= 0) return;
+          const days = capped / (24 * 3600 * 1000);
+          for (const p of catalog) {
+            if (p.id === 'human') continue;
+            const cur = state.ai[p.id];
+            if (!cur) continue;
+            const prof = p.aiProfile;
+            const dayBucket = Math.floor(Date.now() / (24*3600*1000));
+            const rng = mulberry32(hashStr(p.id + '_' + dayBucket));
+            const variance = 1 + (rng() - 0.5) * prof.variability * 2;
+            cur.xp += Math.floor(prof.dailyXpAvg * days * Math.max(0.1, variance));
+            cur.tp = round2(cur.tp + prof.dailyTpAvg * days * Math.max(0.1, variance));
+          }
+          enforceVIP(state, catalog);
+        }
+
+        function enforceVIP(state, catalog) {
+          for (let pass = 0; pass < 2; pass++) {
+            const xpList = catalog.map(p => ({ id: p.id, xp: p.id === 'human' ? state.human.xp : (state.ai[p.id]?.xp ?? 0) })).sort((a,b) => b.xp - a.xp);
+            for (const p of catalog.filter(p=>p.vip)) {
+              const rank = xpList.findIndex(x => x.id === p.id) + 1;
+              const limit = p.vipTier === 'A' ? 10 : 50;
+              if (rank > limit) {
+                const targetXp = xpList[(p.vipTier === 'A' ? 4 : 24)].xp + randInt(Math.random, 200, 700);
+                if (state.ai[p.id]) state.ai[p.id].xp = Math.max(state.ai[p.id].xp, targetXp);
+              }
+            }
+          }
+          for (let pass = 0; pass < 2; pass++) {
+            const tpList = catalog.map(p => ({ id: p.id, tp: p.id === 'human' ? state.human.tp : (state.ai[p.id]?.tp ?? 0) })).sort((a,b) => b.tp - a.tp);
+            for (const p of catalog.filter(p=>p.vip)) {
+              const rank = tpList.findIndex(x => x.id === p.id) + 1;
+              const limit = p.vipTier === 'A' ? 10 : 50;
+              if (rank > limit) {
+                const targetTp = round2(tpList[(p.vipTier === 'A' ? 4 : 24)].tp + 0.5 + Math.random());
+                if (state.ai[p.id]) state.ai[p.id].tp = Math.max(state.ai[p.id].tp, targetTp);
+              }
+            }
+          }
+        }
+
+        function checkComboExpiry(state) {
+          const h = state.human;
+          if (h.combo > 0 && h.comboExpiry && Date.now() > h.comboExpiry) {
+            h.combo = 0;
+            h.comboProgress = 0;
+            h.comboExpiry = 0;
+          }
+        }
+
+        function runTick(state, catalog, force) {
+          const now = Date.now();
+          const elapsed = now - (state.lastTick || now);
+          state.lastTick = now;
+
+          const startDate = new Date(); startDate.setDate(startDate.getDate() - 2);
+          const generated = generateTournaments(startDate, 8);
+          for (const id in generated) if (!state.tournaments[id]) state.tournaments[id] = generated[id];
+
+          for (const id in state.tournaments) {
+            const t = state.tournaments[id];
+            if (!t.resolved && now > t.end) {
+              const resolved = resolveTournament(t, catalog, state.human.tournamentProgress);
+              state.tournaments[id] = resolved;
+              const humanReward = resolved.rewards?.human || 0;
+              const participated = state.human.tournamentJoins[id];
+              if (participated) {
+                if (humanReward > 0) state.human.tp = round2(state.human.tp + humanReward);
+                if (resolved.winner === 'human') {
+                  state.human.tournamentVictories += 1;
+                  state.human.weeklyStats.tournamentWins = (state.human.weeklyStats.tournamentWins || 0) + 1;
+                  state.human.careerHistory.push({ ts: now, type: 'tournament_win', note: `Won ${resolved.name}`, tp: humanReward });
+                } else {
+                  state.human.careerHistory.push({ ts: now, type: 'tournament', note: `${resolved.name}`, tp: humanReward });
+                }
+              }
+            }
+          }
+
+          if (elapsed > 0 || force) simulateAIs(state, catalog, elapsed);
+
+          const today = todayKey();
+          if (state.human.dailyStats.date !== today) {
+            state.human.dailyStats = { date: today, tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, tournamentsJoined: 0, comboMax: 0 };
+            state.human.quests.daily = { date: today, progress: {}, claimed: {} };
+          }
+          const wk = weekKey();
+          if (state.human.weeklyStats.week !== wk) {
+            state.human.weeklyStats = { week: wk, tasks: 0, xp: 0, mockTests: 0, tournamentWins: 0 };
+            state.human.quests.weekly = { week: wk, progress: {}, claimed: {} };
+          }
+
+          checkComboExpiry(state);
+
+          if (state.human.lastTaskDay) {
+            const lastDay = new Date(state.human.lastTaskDay + 'T00:00:00');
+            const todayDate = new Date(today + 'T00:00:00');
+            const diffDays = Math.floor((todayDate - lastDay) / (24*3600*1000));
+            if (diffDays > 1) state.human.streak = 0;
+          }
+
+          for (const id in state.tournaments) if (state.tournaments[id].end < now - 30*24*3600*1000) delete state.tournaments[id];
+
+          const tpList = catalog.map(p => ({ id: p.id, tp: p.id === 'human' ? state.human.tp : (state.ai[p.id]?.tp ?? 0) })).sort((a,b) => b.tp - a.tp);
+          const humanRankTP = tpList.findIndex(x => x.id === 'human') + 1;
+          const newTier = computeTierForRank(humanRankTP);
+          const tierOrder = { 'LT4':0,'HT4':1,'LT3':2,'HT3':3,'LT2':4,'HT2':5,'LT1':6,'HT1':7 };
+          if (tierOrder[newTier] > tierOrder[state.human.highestTier]) {
+            state.human.highestTier = newTier;
+            state.human.careerHistory.push({ ts: now, type: 'tier', note: `Reached ${newTier}` });
+          }
+
+          return state;
+        }
+
+        // ============================================================
+        // ACTIONS
+        // ============================================================
+        function doCompleteTask(state, catalog, taskType, taskId, baseXp, extraData = {}) {
+          const now = Date.now();
+          const h = state.human;
+          const today = todayKey();
+
+          if (h.lastTaskDay && h.lastTaskDay !== today) { h.combo = 0; h.comboProgress = 0; h.comboExpiry = 0; }
+          checkComboExpiry(state);
+
+          const finalXp = calcTaskXp(baseXp, h, taskType);
+
+          h.xp += finalXp;
+          h.tasksCompleted += 1;
+          h.dailyStats.tasks += 1;
+          h.dailyStats.xp += finalXp;
+          h.weeklyStats.tasks += 1;
+          h.weeklyStats.xp += finalXp;
+
+          if (taskType === 'assignment') h.assignmentsCompleted += 1;
+          if (taskId === 'recall_page') { h.recalledPages += 1; h.dailyStats.pages += 1; }
+          if (taskId === 'recall_problem') { h.numericalProblems += 1; h.dailyStats.problems += 1; }
+          if (taskId === 'recall_defs') { h.definitionsRecalled += 5; h.dailyStats.defs += 1; }
+          if (taskType === 'mock') {
+            h.mockTestsCompleted += 1;
+            h.dailyStats.mockTests += 1;
+            h.weeklyStats.mockTests += 1;
+            if (extraData.score) h.mockScoreSum += extraData.score;
+          }
+
+          const potion = potionBonus(h);
+          const comboThreshold = potion.comboDiscount ? 5 : 10;
+          h.comboProgress += 1;
+          if (h.comboProgress >= comboThreshold) {
+            h.combo += 1;
+            h.comboProgress = 0;
+            if (h.combo > h.highestCombo) h.highestCombo = h.combo;
+            if (h.combo > (h.dailyStats.comboMax||0)) h.dailyStats.comboMax = h.combo;
+          }
+          h.comboExpiry = now + 2*3600*1000;
+
+          if (h.dailyStats.tasks === 1) {
+            const yest = new Date(); yest.setDate(yest.getDate()-1);
+            if (h.lastTaskDay === todayKey(yest) || h.streak === 0) {
+              h.streak = h.streak === 0 ? 1 : h.streak + 1;
+            } else {
+              h.streak = Math.max(1, h.streak);
+            }
+            if (h.streak > h.longestStreak) h.longestStreak = h.streak;
+          }
+          h.lastTaskDay = today;
+
+          for (const tid in state.tournaments) {
+            const t = state.tournaments[tid];
+            if (t.resolved) continue;
+            if (now < t.start || now > t.end) continue;
+            if (!h.tournamentJoins[tid]) continue;
+            h.tournamentProgress[tid] = (h.tournamentProgress[tid] || 0) + finalXp;
+          }
+
+          h.dailyXpLog[today] = (h.dailyXpLog[today] || 0) + finalXp;
+
+          const d = h.quests.daily.progress, w = h.quests.weekly.progress;
+          if (taskType === 'assignment') d.assignments = (d.assignments||0)+1;
+          if (taskId === 'recall_page') d.pages = (d.pages||0)+1;
+          if (taskId === 'recall_problem') d.problems = (d.problems||0)+1;
+          if (taskType === 'mock') { d.mockTests = (d.mockTests||0)+1; w.mockTests = (w.mockTests||0)+1; }
+          d.tasks = (d.tasks||0)+1;
+          w.tasks = (w.tasks||0)+1;
+          w.xp = h.weeklyStats.xp;
+          if (h.combo >= 5) d.comboFive = 1;
+
+          h.careerHistory.push({ ts: now, type: 'task', taskType, taskId, xp: finalXp });
+          if (h.careerHistory.length > 500) h.careerHistory = h.careerHistory.slice(-500);
+
+          if (h.equippedPet) {
+            const pet = h.inventory.pets.find(p => p.instanceId === h.equippedPet);
+            if (pet) {
+              pet.petXp += finalXp;
+              while (pet.petXp >= pet.petXpNeeded && pet.level < 20) {
+                pet.petXp -= pet.petXpNeeded;
+                pet.level += 1;
+                pet.petXpNeeded = Math.floor(pet.petXpNeeded * 1.4);
+              }
+            }
+          }
+
+          const newTitleIdx = computeTitleIdx(h.xp);
+          if (newTitleIdx > h.highestTitle) {
+            const titlesGained = [];
+            for (let i = h.highestTitle + 1; i <= newTitleIdx; i++) titlesGained.push(i);
+            h.highestTitle = newTitleIdx;
+            for (const ti of titlesGained) {
+              h.inventory.eggs += 1;
+              h.careerHistory.push({ ts: now, type: 'title', title: TITLES[ti] });
+            }
+          }
+
+          return finalXp;
+        }
+
+        function joinTournament(state, tournamentId) {
+          const h = state.human;
+          if (h.tournamentJoins[tournamentId]) return false;
+          const t = state.tournaments[tournamentId];
+          if (!t || t.resolved) return false;
+          if (Date.now() > t.end) return false;
+          h.tournamentJoins[tournamentId] = true;
+          h.tournamentsJoined += 1;
+          h.dailyStats.tournamentsJoined = (h.dailyStats.tournamentsJoined||0)+1;
+          h.tournamentProgress[tournamentId] = h.tournamentProgress[tournamentId] || 0;
+          return true;
+        }
+
+        function hatchEgg(state) {
+          const h = state.human;
+          if (h.inventory.eggs <= 0) return null;
+          h.inventory.eggs -= 1;
+          const titleIdx = computeTitleIdx(h.xp);
+          let eggPool;
+          if (titleIdx >= 40) eggPool = EGGS;
+          else if (titleIdx >= 30) eggPool = EGGS.slice(0, 5);
+          else if (titleIdx >= 20) eggPool = EGGS.slice(0, 4);
+          else if (titleIdx >= 10) eggPool = EGGS.slice(0, 3);
+          else if (titleIdx >= 5) eggPool = EGGS.slice(0, 2);
+          else eggPool = EGGS.slice(0, 1);
+          const egg = pick(Math.random, eggPool);
+          const rng = mulberry32(Math.floor(Math.random()*1e9));
+          const pet = rollPetFromEgg(egg, rng);
+          const newPet = {
+            instanceId: 'pet_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+            petName: pet.name, eggId: egg.id, emoji: pet.emoji, rarity: pet.rar,
+            ability: pet.ab, val: pet.val, flavor: pet.flavor,
+            level: 1, petXp: 0, petXpNeeded: 100, acquired: Date.now()
+          };
+          h.inventory.pets.push(newPet);
+          h.careerHistory.push({ ts: Date.now(), type: 'pet', note: `Hatched ${pet.name} (${pet.rar})` });
+          return newPet;
+        }
+
+        // ============================================================
+        // LEADERBOARD BUILDERS
+        // ============================================================
+        function buildXPLeaderboard(state, catalog) {
+          const rows = catalog.map(p => ({
+            id: p.id, name: p.name, username: p.username, nationality: p.nationality,
+            vip: p.vip, vipTier: p.vipTier,
+            xp: p.id === 'human' ? state.human.xp : (state.ai[p.id]?.xp ?? 0)
+          }));
+          rows.sort((a,b) => b.xp - a.xp || a.id.localeCompare(b.id));
+          rows.forEach((r, i) => { r.rank = i + 1; r.titleIdx = computeTitleIdx(r.xp); r.title = TITLES[r.titleIdx]; });
+          return rows;
+        }
+
+        function buildTPLeaderboard(state, catalog) {
+          const rows = catalog.map(p => ({
+            id: p.id, name: p.name, username: p.username, nationality: p.nationality,
+            vip: p.vip, vipTier: p.vipTier,
+            tp: p.id === 'human' ? state.human.tp : (state.ai[p.id]?.tp ?? 0)
+          }));
+          rows.sort((a,b) => b.tp - a.tp || a.id.localeCompare(b.id));
+          rows.forEach((r, i) => { r.rank = i + 1; r.tier = computeTierForRank(r.rank); });
+          return rows;
+        }
+
+        // ============================================================
+        // STYLES & COMPONENTS
+        // ============================================================
+        const S = {
+          bg:'#08080c', bg2:'#0f0f18', panel:'#14141e', panel2:'#1c1c2a',
+          border:'#2a2a3e', borderL:'#3a3a52', text:'#f0ebf8', muted:'#8888a0',
+          lavender:'#c4b5fd', pink:'#f5b3d3', blue:'#a5c9e8', mint:'#a8e6cf',
+          gold:'#f5d78e', danger:'#f38ba8', success:'#a8e6cf'
+        };
+
+        function injectStyles() {
+          if (document.getElementById('academia-styles')) return;
+          const css = `
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html, body { background: ${S.bg}; color: ${S.text}; font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; min-height: 100vh; }
+            ::-webkit-scrollbar { width: 8px; height: 8px; }
+            ::-webkit-scrollbar-track { background: ${S.bg2}; }
+            ::-webkit-scrollbar-thumb { background: ${S.borderL}; border-radius: 4px; }
+            button { font-family: inherit; cursor: pointer; border: none; }
+            .ac-card { background: ${S.panel}; border: 1px solid ${S.border}; border-radius: 14px; padding: 16px; }
+            .ac-btn { background: ${S.panel2}; color: ${S.text}; padding: 10px 16px; border-radius: 10px; border: 1px solid ${S.border}; font-size: 13px; font-weight: 600; transition: all .15s; }
+            .ac-btn:hover { background: ${S.border}; border-color: ${S.borderL}; }
+            .ac-btn-primary { background: linear-gradient(135deg, ${S.lavender}, ${S.pink}); color: ${S.bg}; border: none; }
+            .ac-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+            .ac-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+            .ac-input { background: ${S.bg2}; color: ${S.text}; border: 1px solid ${S.border}; border-radius: 10px; padding: 10px 14px; font-size: 13px; width: 100%; outline: none; }
+            .ac-input:focus { border-color: ${S.lavender}; }
+            .ac-tab { background: transparent; color: ${S.muted}; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 500; white-space: nowrap; transition: all .15s; }
+            .ac-tab:hover { color: ${S.text}; }
+            .ac-tab.active { background: ${S.panel2}; color: ${S.text}; }
+            .ac-row { display: flex; align-items: center; gap: 12px; }
+            .ac-col { display: flex; flex-direction: column; gap: 12px; }
+            .ac-grid { display: grid; gap: 12px; }
+            .ac-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+            .ac-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px); }
+            .ac-modal { background: ${S.panel}; border: 1px solid ${S.borderL}; border-radius: 16px; padding: 24px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+            @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+            .ac-fade { animation: fadeIn 0.3s ease; }
+            .ac-pop { animation: pop 0.4s ease; }
+          `;
+          const style = document.createElement('style');
+          style.id = 'academia-styles';
+          style.textContent = css;
+          document.head.appendChild(style);
+        }
+
+        function Toast({ msg, onDone }) {
+          useEffect(() => {
+            if (!msg) return;
+            const t = setTimeout(onDone, 2600);
+            return () => clearTimeout(t);
+          }, [msg, onDone]);
+          if (!msg) return null;
+          return (
+            <div style={{
+              position:'fixed', bottom: 24, right: 24, background: S.panel2, border:`1px solid ${S.lavender}`,
+              borderRadius: 12, padding: '14px 20px', color: S.text, fontSize: 13, fontWeight: 600,
+              boxShadow: '0 8px 32px rgba(196,181,253,0.3)', zIndex: 2000, animation: 'fadeIn 0.3s', maxWidth: 360
+            }}>{msg}</div>
+          );
+        }
+
+        function Card({ children, style }) { return <div className="ac-card" style={style}>{children}</div>; }
+
+        function Section({ title, sub, children, right }) {
+          return (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom: 12, flexWrap:'wrap', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
+                  {sub && <div style={{ fontSize: 12, color: S.muted, marginTop: 2 }}>{sub}</div>}
+                </div>
+                {right}
+              </div>
+              {children}
+            </div>
+          );
+        }
+
+        function ProgressBar({ value, max, color = S.lavender, height = 8 }) {
+          const pct = clamp((value/max)*100, 0, 100);
+          return (
+            <div style={{ background: S.bg2, borderRadius: 20, height, overflow:'hidden' }}>
+              <div style={{ width: pct+'%', height:'100%', background: `linear-gradient(90deg, ${color}, ${color}cc)`, transition: 'width 0.4s ease', borderRadius: 20 }} />
+            </div>
+          );
+        }
+
+        function VIPBadge({ small }) {
+          return <span style={{ fontSize: small ? 9 : 10, background:'linear-gradient(135deg,#f5d78e,#c9a253)', color:'#1a1a24', padding: small?'1px 5px':'2px 7px', borderRadius: 4, fontWeight: 800 }}>VIP</span>;
+        }
+        function YouBadge({ small }) {
+          return <span style={{ fontSize: small ? 9 : 10, background: S.mint, color:'#08080c', padding: small?'1px 5px':'2px 7px', borderRadius: 4, fontWeight: 800 }}>YOU</span>;
+        }
+        function RarityPill({ rarity }) {
+          const c = RARITY_COLORS[rarity] || S.muted;
+          return <span style={{ fontSize: 10, background: c+'22', color: c, border:`1px solid ${c}66`, padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>{rarity}</span>;
+        }
+
+        // ============================================================
+        // SAVE MODAL
+        // ============================================================
+        function SaveModal({ state, onExport, onImport, onClose }) {
+          const fileRef = useRef(null);
+          return (
+            <div className="ac-modal-bg" onClick={onClose}>
+              <div className="ac-modal" onClick={e => e.stopPropagation()}>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>💾 Save & Load</div>
+                <div style={{ fontSize: 12, color: S.muted, marginBottom: 16, lineHeight: 1.6, padding: 12, background: S.bg2, borderRadius: 10, border: `1px solid ${S.border}` }}>
+                  <strong style={{ color: S.pink }}>Important:</strong> This game runs locally in your browser. If you clear your browser data, your progress will be lost. <strong style={{ color: S.lavender }}>Export your save file regularly</strong> to guarantee your progress is never lost.
+                </div>
+                <Card style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: S.muted }}>LAST AUTO-SAVE</div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>{new Date(state.lastSave || state.createdAt || Date.now()).toLocaleString()}</div>
+                  <div style={{ fontSize: 11, color: S.muted, marginTop: 8 }}>GAME CREATED</div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>{new Date(state.createdAt).toLocaleString()}</div>
+                </Card>
+                <button className="ac-btn ac-btn-primary" style={{ width:'100%', marginBottom: 8 }} onClick={onExport}>
+                  ⬇ Download Save File
+                </button>
+                <button className="ac-btn" style={{ width:'100%', marginBottom: 8 }} onClick={() => fileRef.current?.click()}>
+                  ⬆ Load Save File
+                </button>
+                <input ref={fileRef} type="file" accept=".json,application/json" style={{ display:'none' }}
+                  onChange={e => { if (e.target.files?.[0]) onImport(e.target.files[0]); e.target.value = ''; }} />
+                <button className="ac-btn" style={{ width:'100%', marginTop: 8 }} onClick={onClose}>Close</button>
+              </div>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // WELCOME BACK MODAL
+        // ============================================================
+        function WelcomeBack({ elapsedMs, onClose }) {
+          return (
+            <div className="ac-modal-bg">
+              <div className="ac-modal" style={{ textAlign:'center' }}>
+                <div style={{ fontSize: 56 }}>👋</div>
+                <div style={{ fontSize: 22, fontWeight: 700, marginTop: 12 }}>Welcome back!</div>
+                <div style={{ fontSize: 14, color: S.muted, marginTop: 12, lineHeight: 1.7 }}>
+                  You were away for <strong style={{ color: S.lavender }}>{fmtTime(elapsedMs)}</strong>.
+                  <br/>Your 999 AI competitors have kept studying.
+                  <br/>Any tournaments that ended in your absence have been resolved.
+                </div>
+                <button className="ac-btn ac-btn-primary" style={{ marginTop: 20, padding: '12px 32px' }} onClick={onClose}>
+                  Continue
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // DASHBOARD
+        // ============================================================
+        function Dashboard({ state, catalog, lbXP, lbTP, onNav }) {
+          const h = state.human;
+          const titleIdx = computeTitleIdx(h.xp);
+          const xpRank = lbXP.find(r => r.id === 'human')?.rank || '?';
+          const tpRank = lbTP.find(r => r.id === 'human')?.rank || '?';
+          const currentTier = lbTP.find(r => r.id === 'human')?.tier || 'LT4';
+          const nextTitleIdx = Math.min(49, titleIdx + 1);
+          const curTitleXp = TITLE_XP[titleIdx];
+          const nextTitleXp = TITLE_XP[nextTitleIdx];
+          const comboMult = comboMultiplier(h.combo);
+          const equippedPet = h.inventory.pets.find(p => p.instanceId === h.equippedPet);
+          const activePot = h.activePotion && h.activePotion.expires > Date.now() ? h.activePotion : null;
+          const upcoming = Object.values(state.tournaments).filter(t => !t.resolved && t.end > Date.now()).sort((a,b) => a.start - b.start).slice(0, 4);
+
+          return (
+            <div className="ac-fade">
+              <Card style={{ background: `linear-gradient(135deg, ${S.panel} 0%, ${S.panel2} 100%)`, border: `1px solid ${S.borderL}`, marginBottom: 16 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap: 16 }}>
+                  <div style={{ display:'flex', gap: 16, alignItems:'center' }}>
+                    <div style={{ width: 64, height: 64, borderRadius: 16, background: `linear-gradient(135deg, ${S.lavender}, ${S.pink})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize: 28, fontWeight: 800, color: S.bg }}>{h.name[0]}</div>
+                    <div>
+                      <div style={{ display:'flex', gap: 8, alignItems:'center', flexWrap:'wrap' }}>
+                        <div style={{ fontSize: 20, fontWeight: 700 }}>{h.name}</div><YouBadge />
+                      </div>
+                      <div style={{ fontSize: 12, color: S.muted, marginTop: 2 }}>@{catalog.find(p=>p.id==='human')?.username}</div>
+                      <div style={{ marginTop: 8, display:'flex', gap: 6, flexWrap:'wrap' }}>
+                        <span className="ac-pill" style={{ background: TITLE_COLORS[titleIdx].primary+'22', color: TITLE_COLORS[titleIdx].primary }}>{TITLES[titleIdx]}</span>
+                        <span className="ac-pill" style={{ background: TIER_INFO[currentTier].color+'22', color: TIER_INFO[currentTier].color }}>{currentTier}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', gap: 12 }}>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize: 11, color: S.muted, marginBottom: 2 }}>XP RANK</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: S.lavender }}>#{xpRank}</div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize: 11, color: S.muted, marginBottom: 2 }}>TP RANK</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: S.gold }}>#{tpRank}</div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: 16 }}>
+                <Card>
+                  <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>LIFETIME XP</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: S.lavender }}>{fmtInt(h.xp)}</div>
+                  <div style={{ marginTop: 8 }}>
+                    <ProgressBar value={h.xp - curTitleXp} max={nextTitleXp - curTitleXp} color={TITLE_COLORS[titleIdx].primary} />
+                    <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Next: {TITLES[nextTitleIdx]}</div>
+                  </div>
+                </Card>
+                <Card>
+                  <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>LIFETIME TP</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: S.gold }}>{fmtTp(h.tp)}</div>
+                  <div style={{ fontSize: 10, color: S.muted, marginTop: 8 }}>Tier: {currentTier}</div>
+                </Card>
+                <Card>
+                  <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>COMBO</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: S.pink }}>{h.combo}×</div>
+                  <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>{comboMult.toFixed(2)}× XP · Next in {10 - h.comboProgress}</div>
+                  {h.comboExpiry > 0 && <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>Expires: {fmtTime(h.comboExpiry - Date.now())}</div>}
+                </Card>
+                <Card>
+                  <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>STREAK</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: S.mint }}>{h.streak} <span style={{ fontSize: 13, color: S.muted }}>days</span></div>
+                  <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Longest: {h.longestStreak}</div>
+                </Card>
+              </div>
+
+              <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(250px, 1fr))', marginBottom: 16 }}>
+                <Card>
+                  <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>EQUIPPED PET</div>
+                  {equippedPet ? (
+                    <div style={{ display:'flex', alignItems:'center', gap: 12 }}>
+                      <div style={{ fontSize: 40 }}>{equippedPet.emoji}</div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{equippedPet.petName}</div>
+                        <div style={{ fontSize: 11, marginTop: 2 }}><RarityPill rarity={equippedPet.rarity} /></div>
+                        <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Lv. {equippedPet.level} · +{(equippedPet.val * (1+0.05*(equippedPet.level-1))*100).toFixed(1)}% XP</div>
+                      </div>
+                    </div>
+                  ) : <div style={{ color: S.muted, fontSize: 13 }}>No pet equipped.</div>}
+                </Card>
+                <Card>
+                  <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>ACTIVE POTION</div>
+                  {activePot ? (
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>{POTIONS[activePot.type].emoji} {POTIONS[activePot.type].name}</div>
+                      <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Expires in {fmtTime(activePot.expires - Date.now())}</div>
+                    </div>
+                  ) : <div style={{ color: S.muted, fontSize: 13 }}>No active potion.</div>}
+                </Card>
+              </div>
+
+              <Section title="Quick Actions">
+                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}>
+                  <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button>
+                  <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button>
+                  <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button>
+                  <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>🏆 Tournaments</button>
+                </div>
+              </Section>
+
+              <Section title="Upcoming Tournaments" right={<button className="ac-btn" onClick={() => onNav('tournaments')}>See all →</button>}>
+                {upcoming.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No upcoming tournaments.</div> : (
+                  <div className="ac-col">
+                    {upcoming.map(t => {
+                      const isLive = Date.now() >= t.start && Date.now() <= t.end;
+                      const joined = !!h.tournamentJoins[t.id];
+                      return (
+                        <Card key={t.id} style={{ padding: 14 }}>
+                          <div className="ac-row" style={{ justifyContent:'space-between', flexWrap:'wrap', gap: 8 }}>
+                            <div>
+                              <div className="ac-row" style={{ gap: 8 }}>
+                                <span style={{ fontSize: 11, padding:'2px 8px', borderRadius: 6, background: t.type==='daily'?S.blue+'22':t.type==='major'?S.lavender+'22':t.type==='weekly'?S.pink+'22':S.gold+'22', color: t.type==='daily'?S.blue:t.type==='major'?S.lavender:t.type==='weekly'?S.pink:S.gold, fontWeight: 700, textTransform:'uppercase' }}>{t.type}</span>
+                                <span style={{ fontWeight: 700 }}>{t.name}</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>{isLive ? '🔴 LIVE NOW' : `Starts ${fmtTime12(t.start)}`} · {t.baseTP} TP base</div>
+                            </div>
+                            {joined ? <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>✓ Joined</span>
+                             : isLive && !t.resolved ? <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>Join</button> : null}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </Section>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // ASSIGNMENTS
+        // ============================================================
+        function AssignmentsTab({ state, onComplete, toast }) {
+          const [activeTask, setActiveTask] = useState(null);
+          const h = state.human;
+          const confirm = () => {
+            if (!activeTask) return;
+            const xp = onComplete('assignment', activeTask.id, activeTask.xp);
+            toast(`+${xp} XP · ${activeTask.name}`);
+            setActiveTask(null);
+          };
+          return (
+            <div className="ac-fade">
+              <Section title="Assignments" sub="Complete academic tasks to earn XP">
+                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}>
+                  {ASSIGNMENT_TASKS.map(t => (
+                    <Card key={t.id}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}>
+                        <div style={{ fontSize: 28 }}>{t.icon}</div>
+                        <span className="ac-pill" style={{ background: S.lavender+'22', color: S.lavender }}>{t.xp} XP</span>
+                      </div>
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div>
+                      <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div>
+                      <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActiveTask(t)}>Complete</button>
+                    </Card>
+                  ))}
+                </div>
+              </Section>
+              {activeTask && (
+                <div className="ac-modal-bg" onClick={() => setActiveTask(null)}>
+                  <div className="ac-modal" onClick={e => e.stopPropagation()}>
+                    <div style={{ textAlign:'center', marginBottom: 20 }}>
+                      <div style={{ fontSize: 48, marginBottom: 12 }}>{activeTask.icon}</div>
+                      <div style={{ fontSize: 20, fontWeight: 700 }}>{activeTask.name}</div>
+                      <div style={{ fontSize: 13, color: S.muted, marginTop: 4 }}>{activeTask.desc}</div>
+                    </div>
+                    <div style={{ fontSize: 13, color: S.muted, textAlign:'center', marginBottom: 20 }}>
+                      Confirm you have completed this task. Reward: <strong style={{ color: S.lavender }}>+{calcTaskXp(activeTask.xp, h, 'assignment')} XP</strong>
+                    </div>
+                    <div style={{ display:'flex', gap: 10 }}>
+                      <button className="ac-btn" style={{ flex: 1 }} onClick={() => setActiveTask(null)}>Cancel</button>
+                      <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} onClick={confirm}>Confirm</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // ============================================================
+        // STUDYING
+        // ============================================================
+        function StudyingTab({ state, onComplete, toast }) {
+          const h = state.human;
+          const [active, setActive] = useState(null);
+          const [stage, setStage] = useState(0);
+          const [question, setQuestion] = useState(null);
+          const [answer, setAnswer] = useState(null);
+
+          const start = (task) => {
+            const rng = mulberry32(Math.floor(Math.random()*1e9));
+            let content;
+            if (task.id === 'recall_page') {
+              const p = pick(rng, RECALL_PASSAGES);
+              content = { type:'passage', passage: p.passage, q: p.q, opts: p.opts, a: p.a };
+            } else if (task.id === 'recall_problem') {
+              const p = pick(rng, NUM_PROBLEMS);
+              content = { type:'problem', q: p.q, opts: p.opts, a: p.a };
+            } else {
+              const defs = shuffle(DEF_SET, rng).slice(0, 5);
+              const target = defs[0];
+              const wrong = shuffle(DEF_SET.filter(d=>d.term!==target.term), rng).slice(0,3).map(d=>d.term);
+              const opts = shuffle([target.term, ...wrong], rng);
+              content = { type:'defs', defs, q: `Which term matches: "${target.def}"?`, opts, a: opts.indexOf(target.term) };
+            }
+            setActive(task);
+            setQuestion(content);
+            setStage(0);
+            setAnswer(null);
+          };
+
+          const submit = () => setStage(2);
+          const claim = () => {
+            if (!active || !question) return;
+            const correct = answer === question.a;
+            if (correct) {
+              const xp = onComplete('study', active.id, active.xp);
+              toast(`+${xp} XP · ${active.name}`);
+            } else toast('Not quite — try again next time.');
+            setActive(null); setQuestion(null); setStage(0); setAnswer(null);
+          };
+
+          return (
+            <div className="ac-fade">
+              <Section title="Studying & Recall" sub="Answer correctly to earn XP">
+                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}>
+                  {STUDY_TASKS.map(t => (
+                    <Card key={t.id}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}>
+                        <div style={{ fontSize: 28 }}>{t.icon}</div>
+                        <span className="ac-pill" style={{ background: S.pink+'22', color: S.pink }}>{t.xp} XP</span>
+                      </div>
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div>
+                      <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div>
+                      <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin</button>
+                    </Card>
+                  ))}
+                </div>
+              </Section>
+              {active && question && (
+                <div className="ac-modal-bg" onClick={() => { if (stage === 0) { setActive(null); setQuestion(null); } }}>
+                  <div className="ac-modal" onClick={e => e.stopPropagation()}>
+                    <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{active.name}</div>
+                    <div style={{ fontSize: 12, color: S.muted, marginBottom: 16 }}>Reward: +{calcTaskXp(active.xp, h, 'study')} XP (requires correct answer)</div>
+                    {stage === 0 && (
+                      <div>
+                        {question.type === 'passage' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>{question.passage}</div>}
+                        {question.type === 'defs' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>{question.defs.map((d, i) => <div key={i} style={{ marginBottom: 4 }}><strong>{d.term}:</strong> {d.def}</div>)}</div>}
+                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{question.q}</div>
+                        {question.opts.map((opt, i) => (
+                          <button key={i} className="ac-btn" style={{ width:'100%', marginBottom: 6, textAlign:'left', background: answer===i?S.lavender+'22':S.panel2, borderColor: answer===i?S.lavender:S.border }} onClick={() => setAnswer(i)}>
+                            {String.fromCharCode(65+i)}. {opt}
+                          </button>
+                        ))}
+                        <div style={{ marginTop: 14 }}><button className="ac-btn ac-btn-primary" style={{ width: '100%' }} disabled={answer === null} onClick={submit}>Submit</button></div>
+                      </div>
+                    )}
+                    {stage === 2 && (
+                      <div>
+                        <div style={{ textAlign:'center', padding: 20 }}>
+                          <div style={{ fontSize: 40, marginBottom: 8 }}>{answer === question.a ? '✅' : '❌'}</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: answer === question.a ? S.success : S.danger }}>{answer === question.a ? 'Correct!' : 'Incorrect'}</div>
+                          {answer !== question.a && <div style={{ fontSize: 13, color: S.muted, marginTop: 8 }}>Answer: <strong>{question.opts[question.a]}</strong></div>}
+                        </div>
+                        <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={claim}>{answer === question.a ? 'Claim Reward' : 'Close'}</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // ============================================================
+        // MOCK TESTS
+        // ============================================================
+        function MockTestsTab({ state, onComplete, toast }) {
+          const h = state.human;
+          const [active, setActive] = useState(null);
+          const [questions, setQuestions] = useState([]);
+          const [answers, setAnswers] = useState({});
+          const [submitted, setSubmitted] = useState(false);
+          const [score, setScore] = useState(null);
+
+          const start = (test) => {
+            const rng = mulberry32(Math.floor(Math.random()*1e9));
+            setQuestions(shuffle(MOCK_BANK, rng).slice(0, test.questions));
+            setAnswers({}); setSubmitted(false); setScore(null); setActive(test);
+          };
+
+          const submit = () => {
+            let correct = 0;
+            questions.forEach((q, i) => { if (answers[i] === q.a) correct += 1; });
+            const pct = correct / questions.length;
+            setScore({ correct, total: questions.length, pct });
+            setSubmitted(true);
+            if (pct > 0.8) {
+              const xp = onComplete('mock', active.id, active.xp, { score: pct * active.marks });
+              toast(`+${xp} XP · Mock Test passed (${Math.round(pct*100)}%)`);
+            } else toast(`Score ${Math.round(pct*100)}% — need >80%.`);
+          };
+
+          return (
+            <div className="ac-fade">
+              <Section title="Mock Tests" sub="Score strictly above 80% to earn XP">
+                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))' }}>
+                  {MOCK_TESTS.map(t => (
+                    <Card key={t.id}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}>
+                        <div style={{ fontSize: 28 }}>📝</div>
+                        <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{t.xp} XP</span>
+                      </div>
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div>
+                      <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div>
+                      <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin Test</button>
+                    </Card>
+                  ))}
+                </div>
+              </Section>
+              {active && (
+                <div className="ac-modal-bg">
+                  <div className="ac-modal">
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>{active.name}</div>
+                      {!submitted && <button className="ac-btn" onClick={() => setActive(null)}>Exit</button>}
+                    </div>
+                    {!submitted ? (
+                      <div>
+                        {questions.map((q, i) => (
+                          <div key={i} style={{ marginBottom: 18 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{i+1}. {q.q}</div>
+                            <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr' }}>
+                              {q.opts.map((opt, oi) => (
+                                <button key={oi} className="ac-btn" style={{ textAlign:'left', padding:'8px 10px', fontSize: 12, background: answers[i]===oi?S.lavender+'22':S.panel2, borderColor: answers[i]===oi?S.lavender:S.border }} onClick={() => setAnswers({...answers, [i]: oi})}>
+                                  {String.fromCharCode(65+oi)}. {opt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={submit}>
+                          Submit ({Object.keys(answers).length}/{questions.length})
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign:'center', padding: 16 }}>
+                        <div style={{ fontSize: 36, marginBottom: 12 }}>{score.pct > 0.8 ? '🏆' : '📖'}</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{score.correct}/{score.total} ({Math.round(score.pct*100)}%)</div>
+                        <div style={{ fontSize: 14, color: score.pct > 0.8 ? S.success : S.danger, fontWeight: 600, marginBottom: 16 }}>
+                          {score.pct > 0.8 ? `Passed! +${calcTaskXp(active.xp, h, 'mock')} XP` : 'Failed — need >80%.'}
+                        </div>
+                        <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActive(null)}>Close</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // ============================================================
+        // TOURNAMENTS
+        // ============================================================
+        function TournamentsTab({ state, catalog, onJoin, toast }) {
+          const h = state.human;
+          const [filter, setFilter] = useState('all');
+          const now = Date.now();
+          const all = Object.values(state.tournaments).sort((a,b) => a.start - b.start);
+          const upcoming = all.filter(t => !t.resolved && t.start > now);
+          const live = all.filter(t => !t.resolved && t.start <= now && t.end >= now);
+          const past = all.filter(t => t.resolved || t.end < now).sort((a,b) => b.end - a.end);
+          const filtered = filter === 'live' ? live : filter === 'upcoming' ? upcoming : filter === 'past' ? past : [...live, ...upcoming];
+
+          const handleJoin = (t) => { if (onJoin(t.id)) toast(`Joined ${t.name}!`); else toast('Cannot join.'); };
+
+          const renderTournament = (t) => {
+            const isLive = now >= t.start && now <= t.end;
+            const isPast = t.resolved || t.end < now;
+            const joined = !!h.tournamentJoins[t.id];
+            const humanProgress = h.tournamentProgress[t.id] || 0;
+            let liveBoard = null;
+            if (isLive && !t.resolved) {
+              const ais = computeAIParticipants(t, catalog);
+              const elapsedFrac = clamp((now - t.start) / (t.end - t.start), 0, 1);
+              const entries = ais.map(a => ({ pid: a.pid, xp: Math.floor(a.xp * elapsedFrac) }));
+              if (joined) entries.push({ pid: 'human', xp: humanProgress });
+              entries.sort((a,b) => b.xp - a.xp || a.pid.localeCompare(b.pid));
+              liveBoard = entries.slice(0, 10);
+            }
+            return (
+              <Card key={t.id} style={{ marginBottom: 10 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap: 12, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display:'flex', gap: 8, alignItems:'center', flexWrap:'wrap' }}>
+                      <span style={{ fontSize: 10, padding:'2px 8px', borderRadius: 6, background: t.type==='daily'?S.blue+'22':t.type==='major'?S.lavender+'22':t.type==='weekly'?S.pink+'22':S.gold+'22', color: t.type==='daily'?S.blue:t.type==='major'?S.lavender:t.type==='weekly'?S.pink:S.gold, fontWeight: 800, textTransform:'uppercase' }}>{t.type}</span>
+                      <span style={{ fontWeight: 700, fontSize: 15 }}>{t.name}</span>
+                      {isLive && <span className="ac-pill" style={{ background: S.danger+'22', color: S.danger }}>🔴 LIVE</span>}
+                      {isPast && <span className="ac-pill" style={{ background: S.muted+'22', color: S.muted }}>ENDED</span>}
+                      {joined && !isPast && <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>✓ JOINED</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: S.muted, marginTop: 6 }}>
+                      {isPast ? `Ended ${fmtTime12(t.end)}` : `${fmtTime12(t.start)} – ${fmtTime12(t.end)}`} · Base: {t.baseTP} TP
+                    </div>
+                    {isLive && <div style={{ fontSize: 11, color: S.gold, marginTop: 4 }}>⏱ {fmtTime(t.end - now)} remaining</div>}
+                  </div>
+                  <div>
+                    {!isPast && !joined && <button className="ac-btn ac-btn-primary" onClick={() => handleJoin(t)}>Join</button>}
+                    {isPast && t.winner && <div style={{ fontSize: 11, color: S.gold }}>🏆 {catalog.find(p=>p.id===t.winner)?.name || '—'}</div>}
+                  </div>
+                </div>
+                {isLive && liveBoard && (
+                  <div style={{ marginTop: 12, padding: 12, background: S.bg2, borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: S.muted, marginBottom: 8, fontWeight: 600 }}>LIVE LEADERBOARD</div>
+                    {liveBoard.map((e, i) => {
+                      const p = catalog.find(x => x.id === e.pid);
+                      return (
+                        <div key={e.pid} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', fontSize: 12, color: e.pid==='human'?S.mint:S.text }}>
+                          <span>#{i+1} {p?.name}{p?.vip && <span style={{ marginLeft: 6 }}><VIPBadge small /></span>}{e.pid==='human' && <span style={{ marginLeft: 6 }}><YouBadge small /></span>}</span>
+                          <span style={{ color: S.lavender, fontWeight: 600 }}>{fmtInt(e.xp)} XP</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {isPast && t.results && t.results.length > 0 && (
+                  <div style={{ marginTop: 12, padding: 12, background: S.bg2, borderRadius: 10 }}>
+                    <div style={{ fontSize: 11, color: S.muted, marginBottom: 8, fontWeight: 600 }}>TOP PLACEMENTS</div>
+                    {t.results.slice(0, 5).map((r, i) => {
+                      const p = catalog.find(x => x.id === r.pid);
+                      return (
+                        <div key={r.pid} style={{ display:'flex', justifyContent:'space-between', padding:'3px 0', fontSize: 12 }}>
+                          <span>#{i+1} {p?.name}{p?.vip && <span style={{ marginLeft: 6 }}><VIPBadge small /></span>}{r.pid==='human' && <span style={{ marginLeft: 6 }}><YouBadge small /></span>}</span>
+                          <span><span style={{ color: S.lavender }}>{fmtInt(r.xp)} XP</span> · <span style={{ color: S.gold }}>+{fmtTp(r.tp)} TP</span></span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            );
+          };
+
+          return (
+            <div className="ac-fade">
+              <Section title="Tournaments" sub="Compete for Tournament Points" right={
+                <div className="ac-row" style={{ gap: 6 }}>
+                  {['all','live','upcoming','past'].map(f => (
+                    <button key={f} className={`ac-tab ${filter===f?'active':''}`} onClick={() => setFilter(f)} style={{ padding:'6px 12px', fontSize: 12 }}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>
+                  ))}
+                </div>
+              }>
+                <div className="ac-col">
+                  {filtered.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No tournaments here.</div></Card> : filtered.map(renderTournament)}
+                </div>
+              </Section>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // QUESTS
+        // ============================================================
+        const DAILY_QUESTS = [
+          { id:'daily_assign5', name:'Assignment Sweep', desc:'Complete 5 assignments', target:5, key:'assignments', reward:{ xp: 100 } },
+          { id:'daily_pages3', name:'Memory Recall', desc:'Recall 3 pages', target:3, key:'pages', reward:{ xp: 80 } },
+          { id:'daily_problems2', name:'Number Crunch', desc:'Solve 2 numerical problems', target:2, key:'problems', reward:{ xp: 60 } },
+          { id:'daily_combo5', name:'Combo Momentum', desc:'Reach a combo of 5 today', target:1, key:'comboFive', reward:{ xp: 120 } },
+          { id:'daily_tasks10', name:'Busy Scholar', desc:'Complete 10 tasks today', target:10, key:'tasks', reward:{ xp: 150, egg: 1 } }
+        ];
+        const WEEKLY_QUESTS = [
+          { id:'weekly_tasks50', name:'Weekly Marathon', desc:'Complete 50 tasks this week', target:50, key:'tasks', reward:{ xp: 800 } },
+          { id:'weekly_xp2000', name:'XP Accumulator', desc:'Earn 2000 XP this week', target:2000, key:'xp', reward:{ xp: 500, egg: 1 } },
+          { id:'weekly_mocks3', name:'Test Taker', desc:'Complete 3 mock tests', target:3, key:'mockTests', reward:{ xp: 600 } }
+        ];
+
+        function QuestsTab({ state, onClaim, toast }) {
+          const h = state.human;
+          const renderQuest = (q, prog, claimed, period) => {
+            const val = Math.min(prog[q.key] || 0, q.target);
+            const isClaimed = claimed[q.id];
+            const ready = !isClaimed && (prog[q.key] || 0) >= q.target;
+            return (
+              <Card key={q.id} style={{ marginBottom: 10 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', gap: 12, flexWrap:'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{q.name}</div>
+                    <div style={{ fontSize: 12, color: S.muted, marginTop: 2 }}>{q.desc}</div>
+                    <div style={{ marginTop: 8 }}>
+                      <ProgressBar value={val} max={q.target} color={isClaimed?S.muted:ready?S.mint:S.lavender} />
+                      <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>{val} / {q.target}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize: 11, color: S.muted }}>REWARD</div>
+                    <div style={{ fontSize: 13, color: S.gold, fontWeight: 600 }}>+{q.reward.xp} XP{q.reward.egg?` · +${q.reward.egg}🥚`:''}</div>
+                    {ready && <button className="ac-btn ac-btn-primary" style={{ marginTop: 8, padding:'6px 14px', fontSize: 12 }} onClick={() => { onClaim(period, q); toast(`+${q.reward.xp} XP claimed`); }}>Claim</button>}
+                    {isClaimed && <div style={{ fontSize: 11, color: S.muted, marginTop: 8 }}>✓ Claimed</div>}
+                  </div>
+                </div>
+              </Card>
+            );
+          };
+          return (
+            <div className="ac-fade">
+              <Section title="Daily Quests"><div className="ac-col">{DAILY_QUESTS.map(q => renderQuest(q, h.quests.daily.progress, h.quests.daily.claimed, 'daily'))}</div></Section>
+              <Section title="Weekly Quests"><div className="ac-col">{WEEKLY_QUESTS.map(q => renderQuest(q, h.quests.weekly.progress, h.quests.weekly.claimed, 'weekly'))}</div></Section>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // LEADERBOARD
+        // ============================================================
+        function LeaderboardTab({ state, catalog }) {
+          const [mode, setMode] = useState('xp');
+          const [search, setSearch] = useState('');
+          const [natFilter, setNatFilter] = useState('all');
+          const [vipFilter, setVipFilter] = useState(false);
+          const [page, setPage] = useState(0);
+          const pageSize = 50;
+
+          const lb = useMemo(() => mode === 'xp' ? buildXPLeaderboard(state, catalog) : buildTPLeaderboard(state, catalog), [state.human.xp, state.human.tp, state.ai, mode, catalog]);
+          const filtered = useMemo(() => {
+            let rows = lb;
+            if (search.trim()) {
+              const s = search.trim().toLowerCase();
+              rows = rows.filter(r => r.name.toLowerCase().includes(s) || r.username.toLowerCase().includes(s));
+            }
+            if (natFilter !== 'all') rows = rows.filter(r => r.nationality === natFilter);
+            if (vipFilter) rows = rows.filter(r => r.vip);
+            return rows;
+          }, [lb, search, natFilter, vipFilter]);
+
+          const totalPages = Math.ceil(filtered.length / pageSize);
+          const safePage = Math.min(page, Math.max(0, totalPages - 1));
+          const visible = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
+          const humanRank = lb.find(r => r.id === 'human')?.rank;
+
+          return (
+            <div className="ac-fade">
+              <Section title="Leaderboards" sub="All 1000 competitors">
+                <div style={{ display:'flex', gap: 8, marginBottom: 14 }}>
+                  <button className={`ac-tab ${mode==='xp'?'active':''}`} onClick={() => { setMode('xp'); setPage(0); }}>📈 Experience</button>
+                  <button className={`ac-tab ${mode==='tp'?'active':''}`} onClick={() => { setMode('tp'); setPage(0); }}>🏆 Efficiency</button>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap: 8, marginBottom: 14 }}>
+                  <input className="ac-input" placeholder="Search name or username..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
+                  <select className="ac-input" style={{ width:'auto' }} value={natFilter} onChange={e => { setNatFilter(e.target.value); setPage(0); }}>
+                    <option value="all">All nationalities</option>
+                    <option>Japanese</option><option>Russian</option><option>German</option><option>American</option>
+                    <option>Chinese</option><option>French</option>
+                  </select>
+                  <button className={`ac-btn ${vipFilter?'ac-btn-primary':''}`} onClick={() => { setVipFilter(!vipFilter); setPage(0); }}>VIP</button>
+                </div>
+                {humanRank && <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>Your {mode === 'xp' ? 'XP' : 'TP'} rank: <strong style={{ color: mode==='xp'?S.lavender:S.gold }}>#{humanRank}</strong> of 1000</div>}
+                <Card style={{ padding: 0, overflow:'hidden' }}>
+                  <div style={{ maxHeight: 600, overflowY:'auto' }}>
+                    {visible.length === 0 ? <div style={{ padding: 24, textAlign:'center', color: S.muted }}>No results.</div> : visible.map(r => {
+                      const isHuman = r.id === 'human';
+                      return (
+                        <div key={r.id} style={{ display:'grid', gridTemplateColumns:'50px 1fr auto auto', gap: 12, alignItems:'center', padding:'10px 16px', borderBottom:`1px solid ${S.border}`, background: isHuman ? 'rgba(168,230,207,0.08)' : 'transparent' }}>
+                          <div style={{ fontSize: 13, color: S.muted, fontWeight: 700 }}>#{r.rank}</div>
+                          <div>
+                            <div style={{ display:'flex', gap: 6, alignItems:'center', flexWrap:'wrap' }}>
+                              <span style={{ fontWeight: isHuman ? 800 : 600, color: isHuman ? S.mint : S.text, fontSize: 13 }}>{r.name}</span>
+                              {r.vip && <VIPBadge small />}
+                              {isHuman && <YouBadge small />}
+                            </div>
+                            <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>@{r.username} · {r.nationality}</div>
+                          </div>
+                          <div style={{ fontSize: 11, color: mode==='xp'?S.lavender:S.gold, fontWeight: 700, textAlign:'right' }}>
+                            {mode === 'xp' ? r.title : r.tier}
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 700, textAlign:'right', color: mode==='xp'?S.lavender:S.gold }}>
+                            {mode === 'xp' ? fmtShort(r.xp) : fmtTp(r.tp)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop: 12 }}>
+                  <button className="ac-btn" disabled={safePage === 0} onClick={() => setPage(p => Math.max(0, p-1))}>← Prev</button>
+                  <div style={{ fontSize: 12, color: S.muted }}>Page {safePage + 1} / {totalPages || 1}</div>
+                  <button className="ac-btn" disabled={safePage >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
+                </div>
+              </Section>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // PETS
+        // ============================================================
+        function PetsTab({ state, onHatch, onEquip, toast }) {
+          const h = state.human;
+          const [hatching, setHatching] = useState(false);
+          const [hatchResult, setHatchResult] = useState(null);
+          const handleHatch = () => {
+            if (h.inventory.eggs <= 0) return;
+            setHatching(true);
+            setTimeout(() => {
+              const pet = onHatch();
+              if (pet) { setHatchResult(pet); toast(`Hatched ${pet.petName} (${pet.rarity})!`); }
+              setHatching(false);
+            }, 1000);
+          };
+          return (
+            <div className="ac-fade">
+              <Section title="Pets" sub="Hatch eggs awarded by titles">
+                <Card style={{ marginBottom: 16 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>Eggs: {h.inventory.eggs}</div>
+                      <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Common 50% · Uncommon 25% · Rare 15% · Epic 9% · Super Rare 1%</div>
+                    </div>
+                    <button className="ac-btn ac-btn-primary" disabled={h.inventory.eggs <= 0 || hatching} onClick={handleHatch}>
+                      {hatching ? 'Hatching...' : 'Hatch Egg'}
+                    </button>
+                  </div>
+                </Card>
+                {hatchResult && (
+                  <Card style={{ marginBottom: 16, background: `linear-gradient(135deg, ${S.panel} 0%, ${RARITY_COLORS[hatchResult.rarity]}22 100%)`, borderColor: RARITY_COLORS[hatchResult.rarity] }}>
+                    <div style={{ textAlign:'center', padding: 12 }} className="ac-pop">
+                      <div style={{ fontSize: 64, marginBottom: 8 }}>{hatchResult.emoji}</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>{hatchResult.petName}</div>
+                      <div style={{ marginTop: 6 }}><RarityPill rarity={hatchResult.rarity} /></div>
+                      <div style={{ fontSize: 12, color: S.muted, marginTop: 8, fontStyle:'italic' }}>"{hatchResult.flavor}"</div>
+                    </div>
+                  </Card>
+                )}
+                <Section title={`Pet Collection (${h.inventory.pets.length})`}>
+                  {h.inventory.pets.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No pets yet.</div></Card> : (
+                    <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                      {h.inventory.pets.map(p => {
+                        const isEquipped = h.equippedPet === p.instanceId;
+                        return (
+                          <Card key={p.instanceId} style={{ borderColor: isEquipped ? S.mint : S.border }}>
+                            <div style={{ textAlign:'center', marginBottom: 8 }}>
+                              <div style={{ fontSize: 36 }}>{p.emoji}</div>
+                              <div style={{ fontWeight: 700, fontSize: 13, marginTop: 4 }}>{p.petName}</div>
+                              <div style={{ marginTop: 4 }}><RarityPill rarity={p.rarity} /></div>
+                            </div>
+                            <div style={{ fontSize: 10, color: S.muted, textAlign:'center', marginBottom: 8 }}>Lv. {p.level} · +{(p.val * (1+0.05*(p.level-1))*100).toFixed(1)}% XP</div>
+                            <ProgressBar value={p.petXp} max={p.petXpNeeded} height={4} color={RARITY_COLORS[p.rarity]} />
+                            <button className={`ac-btn ${isEquipped?'':'ac-btn-primary'}`} style={{ width:'100%', marginTop: 10, fontSize: 11, padding:'6px' }} onClick={() => { onEquip(p.instanceId); toast(isEquipped ? 'Unequipped' : `Equipped ${p.petName}`); }}>
+                              {isEquipped ? 'Unequip' : 'Equip'}
+                            </button>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Section>
+              </Section>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // INVENTORY
+        // ============================================================
+        function InventoryTab({ state, onUsePotion, toast }) {
+          const h = state.human;
+          const activePot = h.activePotion && h.activePotion.expires > Date.now() ? h.activePotion : null;
+          return (
+            <div className="ac-fade">
+              <Section title="Inventory">
+                <Card style={{ marginBottom: 12 }}>
+                  <div style={{ display:'flex', gap: 16, flexWrap:'wrap' }}>
+                    <div>🥚 <strong>{h.inventory.eggs}</strong> Eggs</div>
+                    <div>🐾 <strong>{h.inventory.pets.length}</strong> Pets</div>
+                    <div>🧪 <strong>{h.inventory.potions.reduce((s,p)=>s+p.quantity,0)}</strong> Potions</div>
+                  </div>
+                </Card>
+                <Section title="Potions">
+                  {activePot && (
+                    <Card style={{ marginBottom: 12, borderColor: S.pink }}>
+                      <div style={{ fontSize: 11, color: S.muted }}>ACTIVE</div>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>{POTIONS[activePot.type].emoji} {POTIONS[activePot.type].name}</div>
+                      <div style={{ fontSize: 11, color: S.muted }}>{fmtTime(activePot.expires - Date.now())} left</div>
+                    </Card>
+                  )}
+                  {h.inventory.potions.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No potions. Earn from quests and milestones.</div></Card> : (
+                    <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                      {h.inventory.potions.map((inv, i) => {
+                        const def = POTIONS[inv.type];
+                        return (
+                          <Card key={i}>
+                            <div style={{ fontSize: 28, marginBottom: 4 }}>{def.emoji}</div>
+                            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{def.name}</div>
+                            <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>{def.desc}</div>
+                            <div style={{ fontSize: 10, color: S.muted }}>Quantity: {inv.quantity}</div>
+                            <button className="ac-btn ac-btn-primary" style={{ width:'100%', marginTop: 8, fontSize: 11, padding:'6px' }} disabled={!!activePot} onClick={() => { onUsePotion(inv.type); toast(`Used ${def.name}`); }}>Use</button>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Section>
+              </Section>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // PROFILE
+        // ============================================================
+        function ProfileTab({ state, catalog, lbXP, lbTP, onRename }) {
+          const h = state.human;
+          const me = catalog.find(p => p.id === 'human');
+          const titleIdx = computeTitleIdx(h.xp);
+          const xpRank = lbXP.find(r => r.id === 'human')?.rank;
+          const tpRank = lbTP.find(r => r.id === 'human')?.rank;
+          const tier = lbTP.find(r => r.id === 'human')?.tier || 'LT4';
+          const [nameEdit, setNameEdit] = useState(me.name);
+          const [editing, setEditing] = useState(false);
+          const days = [];
+          for (let i = 59; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const k = todayKey(d);
+            days.push({ key: k, xp: h.dailyXpLog[k] || 0 });
+          }
+          const maxXp = Math.max(1, ...days.map(d => d.xp));
+          return (
+            <div className="ac-fade">
+              <Card style={{ marginBottom: 16, background: `linear-gradient(135deg, ${S.panel} 0%, ${TITLE_COLORS[titleIdx].primary}11 100%)` }}>
+                <div style={{ display:'flex', gap: 16, alignItems:'center', flexWrap:'wrap' }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 20, background: `linear-gradient(135deg, ${TITLE_COLORS[titleIdx].primary}, ${TITLE_COLORS[titleIdx].secondary})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize: 36, fontWeight: 800, color: S.bg }}>{me.name[0]}</div>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    {editing ? (
+                      <div className="ac-row" style={{ gap: 8 }}>
+                        <input className="ac-input" value={nameEdit} onChange={e => setNameEdit(e.target.value)} maxLength={30} />
+                        <button className="ac-btn ac-btn-primary" onClick={() => { onRename(nameEdit || me.name); setEditing(false); }}>Save</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ fontSize: 22, fontWeight: 800, display:'flex', alignItems:'center', gap: 8 }}>{me.name}<YouBadge /></div>
+                        <div style={{ fontSize: 12, color: S.muted }}>@{me.username} · {me.nationality}</div>
+                      </div>
+                    )}
+                    <div style={{ marginTop: 8, display:'flex', gap: 6, flexWrap:'wrap' }}>
+                      <span className="ac-pill" style={{ background: TITLE_COLORS[titleIdx].primary+'22', color: TITLE_COLORS[titleIdx].primary }}>{TITLES[titleIdx]}</span>
+                      <span className="ac-pill" style={{ background: TIER_INFO[tier].color+'22', color: TIER_INFO[tier].color }}>{tier}</span>
+                    </div>
+                    {!editing && <button className="ac-btn" style={{ marginTop: 8, fontSize: 11, padding:'4px 10px' }} onClick={() => setEditing(true)}>Edit Name</button>}
+                  </div>
+                </div>
+              </Card>
+              <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: 16 }}>
+                <Card><div style={{ fontSize: 11, color: S.muted }}>XP RANK</div><div style={{ fontSize: 24, fontWeight: 800, color: S.lavender }}>#{xpRank}</div></Card>
+                <Card><div style={{ fontSize: 11, color: S.muted }}>TP RANK</div><div style={{ fontSize: 24, fontWeight: 800, color: S.gold }}>#{tpRank}</div></Card>
+                <Card><div style={{ fontSize: 11, color: S.muted }}>HIGHEST TIER</div><div style={{ fontSize: 24, fontWeight: 800, color: TIER_INFO[h.highestTier].color }}>{h.highestTier}</div></Card>
+                <Card><div style={{ fontSize: 11, color: S.muted }}>HIGHEST COMBO</div><div style={{ fontSize: 24, fontWeight: 800, color: S.pink }}>{h.highestCombo}</div></Card>
+              </div>
+              <Card style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Career Statistics</div>
+                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                  {[
+                    ['Total Tasks', h.tasksCompleted], ['Assignments', h.assignmentsCompleted],
+                    ['Recalled Pages', h.recalledPages], ['Numerical Problems', h.numericalProblems],
+                    ['Definitions', h.definitionsRecalled], ['Mock Tests', h.mockTestsCompleted],
+                    ['Avg Mock', h.mockTestsCompleted ? Math.round((h.mockScoreSum / h.mockTestsCompleted) * 100) + '%' : '—'],
+                    ['Tournaments', h.tournamentsJoined], ['Wins', h.tournamentVictories],
+                    ['Pets', h.inventory.pets.length], ['Streak', h.streak], ['Longest', h.longestStreak]
+                  ].map(([label, val], i) => (
+                    <div key={i} style={{ background: S.bg2, borderRadius: 8, padding: 10 }}>
+                      <div style={{ fontSize: 10, color: S.muted }}>{label}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+              <Card>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Last 60 Days Activity</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(20, 1fr)', gap: 3 }}>
+                  {days.map(d => {
+                    const intensity = d.xp === 0 ? 0 : clamp(d.xp / maxXp, 0.15, 1);
+                    return <div key={d.key} title={`${d.key}: ${d.xp} XP`} style={{ aspectRatio: '1', borderRadius: 3, background: d.xp > 0 ? `rgba(196,181,253,${intensity})` : S.bg2, border: `1px solid ${S.border}` }} />;
+                  })}
+                </div>
+              </Card>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // HISTORY
+        // ============================================================
+        function HistoryTab({ state }) {
+          const h = state.human;
+          const history = [...h.careerHistory].reverse().slice(0, 200);
+          const icFor = (type) => ({ task:'📚', tournament_win:'🏆', tournament:'🎯', title:'⭐', pet:'🐾', tier:'🏅', quest:'🎁' }[type] || '•');
+          return (
+            <div className="ac-fade">
+              <Section title="Career History" sub="Recent milestones">
+                <Card>
+                  {history.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No history yet.</div> : (
+                    <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+                      {history.map((e, i) => (
+                        <div key={i} style={{ display:'flex', gap: 12, padding: '10px 0', borderBottom: i<history.length-1?`1px solid ${S.border}`:'none' }}>
+                          <div style={{ fontSize: 20 }}>{icFor(e.type)}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13 }}>
+                              {e.type === 'task' && <>{e.taskId ? e.taskId.replace(/_/g,' ') : 'Task'} <span style={{ color: S.lavender, fontWeight: 700 }}>+{e.xp} XP</span></>}
+                              {e.type === 'tournament_win' && <><strong style={{ color: S.gold }}>Won {e.note}</strong> · +{fmtTp(e.tp)} TP</>}
+                              {e.type === 'tournament' && <>{e.note} · +{fmtTp(e.tp)} TP</>}
+                              {e.type === 'title' && <><strong>Title unlocked: {e.title}</strong></>}
+                              {e.type === 'pet' && <>{e.note}</>}
+                              {e.type === 'tier' && <><strong>{e.note}</strong></>}
+                              {e.type === 'quest' && <>{e.note}</>}
+                            </div>
+                            <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>{new Date(e.ts).toLocaleString()}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </Section>
+            </div>
+          );
+        }
+
+        // ============================================================
+        // MAIN APP
+        // ============================================================
+        const TABS = [
+          { id:'dashboard', label:'Dashboard', icon:'🏠' },
+          { id:'assignments', label:'Assignments', icon:'📐' },
+          { id:'studying', label:'Studying', icon:'📚' },
+          { id:'mocks', label:'Mock Tests', icon:'📝' },
+          { id:'tournaments', label:'Tournaments', icon:'🏆' },
+          { id:'quests', label:'Quests', icon:'🎯' },
+          { id:'leaderboards', label:'Leaderboards', icon:'📊' },
+          { id:'pets', label:'Pets', icon:'🐾' },
+          { id:'inventory', label:'Inventory', icon:'🎒' },
+          { id:'profile', label:'Profile', icon:'👤' },
+          { id:'history', label:'History', icon:'📜' },
+        ];
+
+        function App() {
+          const [loaded, setLoaded] = useState(false);
+          const [tab, setTab] = useState('dashboard');
+          const [toast, setToast] = useState(null);
+          const [, forceUpdate] = useState(0);
+          const [saveModal, setSaveModal] = useState(false);
+          const [welcomeBack, setWelcomeBack] = useState(null);
+          const [savedStatus, setSavedStatus] = useState(null);
+          const catalogRef = useRef(null);
+          const stateRef = useRef(null);
+          const [lbTick, setLbTick] = useState(0);
+
+          const bump = useCallback(() => { forceUpdate(v => v+1); setLbTick(v => v+1); }, []);
+          const toastMsg = useCallback((msg) => setToast(msg), []);
+
+          useEffect(() => {
+            injectStyles();
+            const catalog = buildCatalog();
+            catalogRef.current = catalog;
+            let state = loadState(catalog);
+            const isNew = !state;
+            if (!state) state = initState(catalog);
+
+            const prevTick = state.lastTick || Date.now();
+            const elapsedAway = Date.now() - prevTick;
+
+            state = runTick(state, catalog, isNew);
+            stateRef.current = state;
+            saveState(state);
+
+            if (!isNew && elapsedAway > 5 * 60 * 1000) {
+              setWelcomeBack(elapsedAway);
+            }
+
+            setLoaded(true);
+
+            const saveIv = setInterval(() => {
+              if (stateRef.current) {
+                const ok = saveState(stateRef.current);
+                setSavedStatus(ok ? Date.now() : 'failed');
+              }
+            }, 20000);
+
+            const tickIv = setInterval(() => {
+              if (!stateRef.current) return;
+              runTick(stateRef.current, catalogRef.current, false);
+              bump();
+            }, 30000);
+
+            const renderIv = setInterval(() => { bump(); }, 1000);
+
+            return () => { clearInterval(saveIv); clearInterval(tickIv); clearInterval(renderIv); };
+          }, []);
+
+          const update = useCallback((fn) => {
+            if (!stateRef.current) return;
+            fn(stateRef.current);
+            const ok = saveState(stateRef.current);
+            setSavedStatus(ok ? Date.now() : 'failed');
+            bump();
+          }, []);
+
+          const handleComplete = useCallback((type, id, baseXp, extra) => {
+            let xp = 0;
+            update(s => { xp = doCompleteTask(s, catalogRef.current, type, id, baseXp, extra); });
+            return xp;
+          }, [update]);
+
+          const handleJoin = useCallback((tid) => {
+            let ok = false;
+            update(s => { ok = joinTournament(s, tid); });
+            return ok;
+          }, [update]);
+
+          const handleHatch = useCallback(() => {
+            let pet = null;
+            update(s => { pet = hatchEgg(s); });
+            return pet;
+          }, [update]);
+
+          const handleEquip = useCallback((id) => {
+            update(s => { s.human.equippedPet = s.human.equippedPet === id ? null : id; });
+          }, [update]);
+
+          const handleUsePotion = useCallback((type) => {
+            update(s => {
+              const idx = s.human.inventory.potions.findIndex(p => p.type === type);
+              if (idx < 0) return;
+              const inv = s.human.inventory.potions[idx];
+              if (inv.quantity <= 0) return;
+              const def = POTIONS[type];
+              inv.quantity -= 1;
+              if (inv.quantity <= 0) s.human.inventory.potions.splice(idx, 1);
+              s.human.activePotion = { type, expires: Date.now() + def.dur };
+            });
+          }, [update]);
+
+          const handleClaim = useCallback((period, quest) => {
+            update(s => {
+              const h = s.human;
+              const claimed = period === 'daily' ? h.quests.daily.claimed : h.quests.weekly.claimed;
+              if (claimed[quest.id]) return;
+              claimed[quest.id] = true;
+              h.xp += quest.reward.xp;
+              if (quest.reward.egg) h.inventory.eggs += quest.reward.egg;
+              h.careerHistory.push({ ts: Date.now(), type: 'quest', note: `Quest ${quest.name}` });
+            });
+          }, [update]);
+
+          const handleRename = useCallback((newName) => {
+            update(s => {
+              const me = catalogRef.current.find(p => p.id === 'human');
+              if (me) me.name = newName;
+            });
+          }, [update]);
+
+          const handleExport = useCallback(() => {
+            try {
+              const data = JSON.stringify(stateRef.current, null, 2);
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `academia-save-${todayKey()}.json`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+              toastMsg('💾 Save exported to file!');
+            } catch (e) {
+              toastMsg('Export failed: ' + e.message);
+            }
+          }, [toastMsg]);
+
+          const handleImport = useCallback((file) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const data = JSON.parse(e.target.result);
+                if (!data || data.version !== STATE_VERSION) throw new Error('Incompatible save version');
+                if (!data.human || !data.ai) throw new Error('Invalid save data');
+                const defaults = initHumanState();
+                data.human = { ...defaults, ...data.human };
+                if (!data.tournaments) data.tournaments = {};
+                stateRef.current = data;
+                saveState(data);
+                setSaveModal(false);
+                bump();
+                toastMsg('✅ Save loaded! Welcome back.');
+                const elapsed = Date.now() - (data.lastTick || Date.now());
+                if (elapsed > 5 * 60 * 1000) setWelcomeBack(elapsed);
+              } catch (err) {
+                toastMsg('Import failed: ' + err.message);
+              }
+            };
+            reader.readAsText(file);
+          }, [bump, toastMsg]);
+
+          const catalog = catalogRef.current;
+          const state = stateRef.current;
+
+          const lbXP = useMemo(() => state ? buildXPLeaderboard(state, catalog) : [], [state?.human.xp, state?.ai, lbTick, catalog]);
+          const lbTP = useMemo(() => state ? buildTPLeaderboard(state, catalog) : [], [state?.human.tp, state?.ai, lbTick, catalog]);
+
+          if (!loaded || !catalog || !state) {
+            return <div style={{ padding: 40, textAlign:'center', color: S.muted }}>Loading Academia...</div>;
+          }
+
+          const lastSave = savedStatus === 'failed' ? 'Storage unavailable' : new Date(state.lastSave || Date.now()).toLocaleTimeString();
+
+          return (
+            <div style={{ minHeight:'100vh', background: S.bg }}>
+              <div style={{ background: S.bg2, borderBottom: `1px solid ${S.border}`, padding: '12px 20px', position:'sticky', top: 0, zIndex: 100 }}>
+                <div style={{ maxWidth: 1200, margin:'0 auto', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap: 10 }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, letterSpacing:'-0.5px', background: `linear-gradient(135deg, ${S.lavender}, ${S.pink}, ${S.gold})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>ACADEMIA</div>
+                    <div style={{ fontSize: 10, color: S.muted, letterSpacing: 1, fontWeight: 600, display: 'none' }}>1000 PLAYER COMPETITION</div>
+                  </div>
+                  <div style={{ display:'flex', gap: 12, alignItems:'center', fontSize: 12, flexWrap:'wrap' }}>
+                    <div><span style={{ color: S.muted }}>XP:</span> <strong style={{ color: S.lavender }}>{fmtInt(state.human.xp)}</strong></div>
+                    <div><span style={{ color: S.muted }}>TP:</span> <strong style={{ color: S.gold }}>{fmtTp(state.human.tp)}</strong></div>
+                    <div><span style={{ color: S.muted }}>Combo:</span> <strong style={{ color: S.pink }}>{state.human.combo}×</strong></div>
+                    <button className="ac-btn ac-btn-primary" style={{ padding:'8px 14px', fontSize: 12 }} onClick={() => setSaveModal(true)}>
+                      💾 Save
+                    </button>
+                  </div>
+                </div>
+                <div style={{ maxWidth: 1200, margin:'4px auto 0', fontSize: 10, color: S.muted, textAlign:'right', display:'none' }}>
+                  Auto-saved: {lastSave}
+                </div>
+              </div>
+
+              <div style={{ background: S.bg, borderBottom: `1px solid ${S.border}`, position:'sticky', top: 56, zIndex: 99 }}>
+                <div style={{ maxWidth: 1200, margin:'0 auto', padding:'8px 12px', display:'flex', gap: 4, overflowX:'auto' }}>
+                  {TABS.map(t => (
+                    <button key={t.id} className={`ac-tab ${tab===t.id?'active':''}`} onClick={() => setTab(t.id)}>
+                      <span style={{ marginRight: 4 }}>{t.icon}</span>{t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ maxWidth: 1200, margin:'0 auto', padding:'20px 16px 60px' }}>
+                {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onNav={setTab} />}
+                {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />}
+                {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />}
+                {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />}
+                {tab === 'tournaments' && <TournamentsTab state={state} catalog={catalog} onJoin={handleJoin} toast={toastMsg} />}
+                {tab === 'quests' && <QuestsTab state={state} onClaim={handleClaim} toast={toastMsg} />}
+                {tab === 'leaderboards' && <LeaderboardTab state={state} catalog={catalog} />}
+                {tab === 'pets' && <PetsTab state={state} onHatch={handleHatch} onEquip={handleEquip} toast={toastMsg} />}
+                {tab === 'inventory' && <InventoryTab state={state} onUsePotion={handleUsePotion} toast={toastMsg} />}
+                {tab === 'profile' && <ProfileTab state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onRename={handleRename} />}
+                {tab === 'history' && <HistoryTab state={state} />}
+              </div>
+
+              {saveModal && <SaveModal state={state} onExport={handleExport} onImport={handleImport} onClose={() => setSaveModal(false)} />}
+              {welcomeBack !== null && <WelcomeBack elapsedMs={welcomeBack} onClose={() => setWelcomeBack(null)} />}
+              <Toast msg={toast} onDone={() => setToast(null)} />
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
