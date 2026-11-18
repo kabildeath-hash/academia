@@ -90,8 +90,6 @@
         ];
         const MOTTOS = ["Semper Fidelis", "Lux et Veritas", "Vincit qui patitur", "Audentes Fortuna Iuvat", "Knowledge is Power", "Focus & Discipline"];
         const AVATARS = ['🦊','🦉','🐱','🐼','🦁','🐯','🦊','🐰','🦅','🐺'];
-        const FRAMES = ['default', 'lavender', 'gold', 'neon'];
-        const BADGES = ['⭐', '🎖️', '🔥', '💎', '👑', '📜'];
 
         // ============================================================ // TITLES & TIERS // ============================================================ 
         const TITLE_XP = Array.from({length:50},(_,i)=>Math.round(40*Math.pow(i,2.2))); 
@@ -164,6 +162,7 @@
         const MONTHLY_NAMES = ['The Ivory Crown','Grandmaster\'s Gala','Sovereign Tournament','Imperial Scholars Cup']; 
         const ASSIGNMENT_TASKS = [ { id:'math_page', name:'Mathematics Page', desc:'1 page of Mathematics assignment', xp:1, icon:'📐' }, { id:'english_page', name:'English Page', desc:'1 page of English assignment', xp:2, icon:'📖' }, { id:'physics_page', name:'Advanced Physics Page', desc:'1 page of Advanced Physics', xp:2, icon:'⚛️' }, { id:'highlevel_page', name:'Extra High-Level Page', desc:'1 page of Extra High-Level assignment', xp:3, icon:'🎓' }, { id:'project_hour', name:'Project Work', desc:'1 hour of project work', xp:30, icon:'🛠️', long:true } ]; 
         const STUDY_TASKS = [ { id:'recall_page', name:'Recall a Page', desc:'Recall 1 page worth of information', xp:5, icon:'📄' }, { id:'recall_problem', name:'Recall a Numerical Problem', desc:'Recall 1 numerical problem', xp:10, icon:'🧮' }, { id:'recall_defs', name:'Recall 5 Definitions', desc:'Recall 5 definitions', xp:20, icon:'📚' } ]; 
+        const OTHER_TASKS = [ { id:'clean_ten', name:'Clean/Organize 10 things', desc:'Clean or organize 10 items around your space', xp:10, icon:'🧹' } ];
         const MOCK_TESTS = [ { id:'mock_75', name:'75-Mark Mock Test', desc:'15 questions · need >80% (61/75)', xp:500, marks:75, questions:15 }, { id:'mock_38', name:'38-Mark Mock Test', desc:'10 questions · need >80% (31/38)', xp:250, marks:38, questions:10 } ]; 
         const MOCK_BANK = [ { q:'What is the derivative of sin(x)?', opts:['cos(x)','-cos(x)','sin(x)','-sin(x)'], a:0 }, { q:'∫ 1/x dx equals:', opts:['x + C','ln|x| + C','1/x² + C','e^x + C'], a:1 }, { q:'The limit of (sin x)/x as x→0 is:', opts:['0','1','∞','undefined'], a:1 }, { q:'SI unit of electrical resistance?', opts:['Volt','Ohm','Ampere','Watt'], a:1 }, { q:'Speed of light ≈:', opts:['3×10⁶ m/s','3×10⁸ m/s','3×10¹⁰ m/s','3×10⁴ m/s'], a:1 }, { q:'Newton\'s second law:', opts:['F = ma','E = mc²','P = IV','v = u + at'], a:0 }, { q:'Past participle of "to write":', opts:['wrote','written','writ','writes'], a:1 }, { q:'"She ___ to the library yesterday."', opts:['go','goes','went','gone'], a:2 }, { q:'Synonym for "ubiquitous":', opts:['rare','omnipresent','hidden','small'], a:1 }, { q:'Matrix [[1,0],[0,1]] is:', opts:['Zero','Identity','Inverse','Diagonal'], a:1 }, { q:'e^(iπ) + 1 =', opts:['0','1','-1','i'], a:0 }, { q:'Particle with no electric charge:', opts:['Proton','Electron','Neutron','Positron'], a:2 }, { q:'Sum of interior angles of a triangle:', opts:['90°','180°','270°','360°'], a:1 }, { q:'"Ephemeral" means:', opts:['everlasting','short-lived','spacious','fragrant'], a:1 }, { q:'Work done by perpendicular force:', opts:['Maximum','Zero','Negative','Infinite'], a:1 } ]; 
         const RECALL_PASSAGES = [ { passage:'Mitochondria are membrane-bound organelles. Often called the "powerhouse of the cell," they generate most of the cell\'s ATP.', q:'What molecule do mitochondria primarily produce?', opts:['DNA','ATP','RNA','Glucose'], a:1 }, { passage:'The Krebs cycle (citric acid cycle) is a series of reactions used by aerobic organisms to release stored energy through acetyl-CoA oxidation.', q:'What is the Krebs cycle also called?', opts:['Citric acid cycle','Glycolysis','Calvin cycle','Pentose cycle'], a:0 }, { passage:'In linear algebra, the determinant of [[a,b],[c,d]] is ad − bc. A matrix is invertible if and only if its determinant is nonzero.', q:'When is a 2×2 matrix invertible?', opts:['When determinant = 0','When determinant ≠ 0','When trace = 0','Always'], a:1 }, { passage:'The photoelectric effect is emission of electrons when EM radiation hits a material. Einstein explained it via quanta of energy called photons.', q:'Quanta of light are called?', opts:['Electrons','Protons','Photons','Neutrinos'], a:2 }, { passage:'The subjunctive mood expresses wishes, hypotheticals, or demands. "If I were you" uses the subjunctive form of "to be."', q:'Which sentence uses the subjunctive mood?', opts:['If I was you','If I were you','I am you','I will be you'], a:1 } ]; 
@@ -375,11 +374,10 @@
             return tours; 
         } 
 
-        // New TP Distribution (1.25 per rank scaling, top 1 +100 down to last -100)
         function tpReward(base, n, rank) {
             if (n <= 1) return base;
-            const fraction = (n - rank) / (n - 1); // 1 for 1st place, 0 for last place
-            const raw = (fraction * 200 - 100) * (base / 50); // Scale with baseTP
+            const fraction = (n - rank) / (n - 1); 
+            const raw = (fraction * 200 - 100) * (base / 50); 
             return Math.round(raw * 100) / 100;
         }
 
@@ -423,7 +421,6 @@
 
         // ============================================================ // ADVANCED AI SIMULATION // ============================================================ 
         function getActivityMultiplier(hour, weekday, peakHour) {
-            // Activity curve peaking around peakHour, lower at night
             const dist = Math.abs(hour - peakHour);
             const circadian = Math.max(0.1, 1 - Math.min(dist, 24 - dist) / 12);
             const weekendDip = (weekday === 0 || weekday === 6) ? 0.8 : 1.0;
@@ -433,7 +430,7 @@
         function simulateAIsStep(state, catalog, elapsedMs) {
             const now = Date.now();
             const totalHours = elapsedMs / 3600000;
-            const steps = Math.min(168, Math.max(1, Math.floor(totalHours))); // Hourly step simulation
+            const steps = Math.min(168, Math.max(1, Math.floor(totalHours))); 
             const stepHours = totalHours / steps;
             const rngBase = mulberry32(Math.floor(now / 3600000));
 
@@ -449,16 +446,13 @@
                     if (!cur) continue;
                     if (cur.retired) continue;
 
-                    // Check off days / burnout
                     if (simDate.getTime() < cur.offUntil) continue;
 
                     const pr = p.aiProfile;
                     const rng = mulberry32(hashStr(p.id + '_' + bucket));
 
-                    // Mean-reverting energy walk
                     cur.energy = clamp(cur.energy + (rng() - 0.48) * 0.1, 0.3, 1.8);
                     
-                    // Periodic burnout or off day check
                     if (rng() < 0.005) {
                         cur.offUntil = simDate.getTime() + randInt(rng, 12, 48) * 3600000;
                         continue;
@@ -473,7 +467,6 @@
                 }
             }
 
-            // Churn / retirement & softer VIP enforcement
             enforceVIPAndChurn(state, catalog);
         }
 
@@ -483,13 +476,11 @@
                 if (p.id === 'human' || p.vip) continue;
                 const cur = state.ai[p.id];
                 if (!cur) continue;
-                // Occasional retirement for inactive bottom AIs
                 if (!cur.retired && cur.xp < 5000 && rng() < 0.0001) {
                     cur.retired = true;
                 }
             }
 
-            // Soft VIP clamping
             for (let pass = 0; pass < 2; pass++) { 
                 const xpList = catalog.map(p => ({ id: p.id, xp: p.id === 'human' ? state.human.xp : (state.ai[p.id]?.xp ?? 0) })).sort((a,b) => b.xp - a.xp); 
                 for (const p of catalog.filter(p=>p.vip)) { 
@@ -832,16 +823,62 @@
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>EQUIPPED PET</div> {equippedPet ? ( <div style={{ display:'flex', alignItems:'center', gap: 12 }}> <div className="ac-float" style={{ fontSize: 40 }}>{equippedPet.emoji}</div> <div> <div style={{ fontWeight: 700, fontSize: 15 }}>{equippedPet.petName}</div> <div style={{ fontSize: 11, marginTop: 2 }}><RarityPill rarity={equippedPet.rarity} /></div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Lv. {equippedPet.level} · +{(equippedPet.val * (1+0.05*(equippedPet.level-1))*100).toFixed(1)}% XP</div> </div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No pet equipped.</div>} </Card> 
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>ACTIVE POTION</div> {activePot ? ( <div> <div style={{ fontSize: 14, fontWeight: 700 }}>{POTIONS[activePot.type].emoji} {POTIONS[activePot.type].name}</div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Expires in {fmtTime(activePot.expires - Date.now())}</div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No active potion.</div>} </Card> 
                     </div> 
-                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>🏆 Tournaments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
+                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('othertasks')}>🧹 Other Tasks</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>🏆 Tournaments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
                     <Section title="Upcoming Tournaments" right={<button className="ac-btn" onClick={() => onNav('tournaments')}>See all →</button>}> {upcoming.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No upcoming tournaments.</div> : ( <div className="ac-col"> {upcoming.map(t => { const isLive = Date.now() >= t.start && Date.now() <= t.end; const joined = !!h.tournamentJoins[t.id]; return ( <Card key={t.id} style={{ padding: 14 }}> <div className="ac-row" style={{ justifyContent:'space-between', flexWrap:'wrap', gap: 8 }}> <div> <div className="ac-row" style={{ gap: 8 }}> <span style={{ fontSize: 11, padding:'2px 8px', borderRadius: 6, background: t.type==='daily'?S.blue+'22':t.type==='major'?S.lavender+'22':t.type==='weekly'?S.pink+'22':S.gold+'22', color: t.type==='daily'?S.blue:t.type==='major'?S.lavender:t.type==='weekly'?S.pink:S.gold, fontWeight: 700, textTransform:'uppercase' }}>{t.type}</span> <span style={{ fontWeight: 700 }}>{t.name}</span> </div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>{isLive ? '🔴 LIVE NOW' : `Starts ${fmtTime12(t.start)}`} · {t.baseTP} TP base</div> </div> {joined ? <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>✓ Joined</span> : isLive && !t.resolved ? <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>Join</button> : null} </div> </Card> ); })} </div> )} </Section> 
                 </div> 
             ); 
         } 
 
-        // ============================================================ // ASSIGNMENTS, STUDYING, MOCK TESTS // ============================================================ 
+        // ============================================================ // ASSIGNMENTS, STUDYING, OTHER TASKS, MOCK TESTS // ============================================================ 
         function AssignmentsTab({ state, onComplete, toast }) { const [activeTask, setActiveTask] = useState(null); const h = state.human; const confirm = () => { if (!activeTask) return; const xp = onComplete('assignment', activeTask.id, activeTask.xp); toast(`+${xp} XP · ${activeTask.name}`); setActiveTask(null); }; return ( <div className="ac-fade"> <Section title="Assignments" sub="Complete academic tasks to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}> {ASSIGNMENT_TASKS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>{t.icon}</div> <span className="ac-pill" style={{ background: S.lavender+'22', color: S.lavender }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActiveTask(t)}>Complete</button> </Card> ))} </div> </Section> {activeTask && ( <div className="ac-modal-bg" onClick={() => setActiveTask(null)}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ textAlign:'center', marginBottom: 20 }}> <div style={{ fontSize: 48, marginBottom: 12 }}>{activeTask.icon}</div> <div style={{ fontSize: 20, fontWeight: 700 }}>{activeTask.name}</div> <div style={{ fontSize: 13, color: S.muted, marginTop: 4 }}>{activeTask.desc}</div> </div> <div style={{ fontSize: 13, color: S.muted, textAlign:'center', marginBottom: 20 }}> Confirm you have completed this task. Reward: <strong style={{ color: S.lavender }}>+{calcTaskXp(activeTask.xp, h, 'assignment')} XP</strong> </div> <div style={{ display:'flex', gap: 10 }}> <button className="ac-btn" style={{ flex: 1 }} onClick={() => setActiveTask(null)}>Cancel</button> <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} onClick={confirm}>Confirm</button> </div> </div> </div> )} </div> ); } 
 
         function StudyingTab({ state, onComplete, toast }) { const h = state.human; const [active, setActive] = useState(null); const [stage, setStage] = useState(0); const [question, setQuestion] = useState(null); const [answer, setAnswer] = useState(null); const start = (task) => { const rng = mulberry32(Math.floor(Math.random()*1e9)); let content; if (task.id === 'recall_page') { const p = pick(rng, RECALL_PASSAGES); content = { type:'passage', passage: p.passage, q: p.q, opts: p.opts, a: p.a }; } else if (task.id === 'recall_problem') { const p = pick(rng, NUM_PROBLEMS); content = { type:'problem', q: p.q, opts: p.opts, a: p.a }; } else { const defs = shuffle(DEF_SET, rng).slice(0, 5); const target = defs[0]; const wrong = shuffle(DEF_SET.filter(d=>d.term!==target.term), rng).slice(0,3).map(d=>d.term); const opts = shuffle([target.term, ...wrong], rng); content = { type:'defs', defs, q: `Which term matches: "${target.def}"?`, opts, a: opts.indexOf(target.term) }; } setActive(task); setQuestion(content); setStage(0); setAnswer(null); }; const submit = () => setStage(2); const claim = () => { if (!active || !question) return; const correct = answer === question.a; if (correct) { const xp = onComplete('study', active.id, active.xp); toast(`+${xp} XP · ${active.name}`); } else toast('Not quite — try again next time.'); setActive(null); setQuestion(null); setStage(0); setAnswer(null); }; return ( <div className="ac-fade"> <Section title="Studying & Recall" sub="Answer correctly to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}> {STUDY_TASKS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>{t.icon}</div> <span className="ac-pill" style={{ background: S.pink+'22', color: S.pink }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin</button> </Card> ))} </div> </Section> {active && question && ( <div className="ac-modal-bg" onClick={() => { if (stage === 0) { setActive(null); setQuestion(null); } }}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{active.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 16 }}>Reward: +{calcTaskXp(active.xp, h, 'study')} XP (requires correct answer)</div> {stage === 0 && ( <div> {question.type === 'passage' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>{question.passage}</div>} {question.type === 'defs' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>{question.defs.map((d, i) => <div key={i} style={{ marginBottom: 4 }}><strong>{d.term}:</strong> {d.def}</div>)}</div>} <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{question.q}</div> {question.opts.map((opt, i) => ( <button key={i} className="ac-btn" style={{ width:'100%', marginBottom: 6, textAlign:'left', background: answer===i?S.lavender+'22':S.panel2, borderColor: answer===i?S.lavender:S.border }} onClick={() => setAnswer(i)}> {String.fromCharCode(65+i)}. {opt} </button> ))} <div style={{ marginTop: 14 }}><button className="ac-btn ac-btn-primary" style={{ width: '100%' }} disabled={answer === null} onClick={submit}>Submit</button></div> </div> )} {stage === 2 && ( <div> <div style={{ textAlign:'center', padding: 20 }}> <div style={{ fontSize: 40, marginBottom: 8 }}>{answer === question.a ? '✅' : '❌'}</div> <div style={{ fontSize: 16, fontWeight: 700, color: answer === question.a ? S.success : S.danger }}>{answer === question.a ? 'Correct!' : 'Incorrect'}</div> {answer !== question.a && <div style={{ fontSize: 13, color: S.muted, marginTop: 8 }}>Answer: <strong>{question.opts[question.a]}</strong></div>} </div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={claim}>{answer === question.a ? 'Claim Reward' : 'Close'}</button> </div> )} </div> </div> )} </div> ); } 
+
+        function OtherTasksTab({ state, onComplete, toast }) { 
+            const [activeTask, setActiveTask] = useState(null); 
+            const h = state.human; 
+            const confirm = () => { 
+                if (!activeTask) return; 
+                const xp = onComplete('othertask', activeTask.id, activeTask.xp); 
+                toast(`+${xp} XP · ${activeTask.name}`); 
+                setActiveTask(null); 
+            }; 
+            return ( 
+                <div className="ac-fade"> 
+                    <Section title="Other Tasks" sub="Complete helpful lifestyle and productivity tasks"> 
+                        <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}> 
+                            {OTHER_TASKS.map(t => ( 
+                                <Card key={t.id}> 
+                                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> 
+                                        <div style={{ fontSize: 28 }}>{t.icon}</div> 
+                                        <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>{t.xp} XP</span> 
+                                    </div> 
+                                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> 
+                                    <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> 
+                                    <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActiveTask(t)}>Complete</button> 
+                                </Card> 
+                            ))} 
+                        </div> 
+                    </Section> 
+                    {activeTask && ( 
+                        <div className="ac-modal-bg" onClick={() => setActiveTask(null)}> 
+                            <div className="ac-modal" onClick={e => e.stopPropagation()}> 
+                                <div style={{ textAlign:'center', marginBottom: 20 }}> 
+                                    <div style={{ fontSize: 48, marginBottom: 12 }}>{activeTask.icon}</div> 
+                                    <div style={{ fontSize: 20, fontWeight: 700 }}>{activeTask.name}</div> 
+                                    <div style={{ fontSize: 13, color: S.muted, marginTop: 4 }}>{activeTask.desc}</div> 
+                                </div> 
+                                <div style={{ fontSize: 13, color: S.muted, textAlign:'center', marginBottom: 20 }}> Confirm you have completed this task. Reward: <strong style={{ color: S.mint }}>+{calcTaskXp(activeTask.xp, h, 'othertask')} XP</strong> </div> 
+                                <div style={{ display:'flex', gap: 10 }}> 
+                                    <button className="ac-btn" style={{ flex: 1 }} onClick={() => setActiveTask(null)}>Cancel</button> 
+                                    <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} onClick={confirm}>Confirm</button> 
+                                </div> 
+                            </div> 
+                        </div> 
+                    )} 
+                </div> 
+            ); 
+        } 
 
         function MockTestsTab({ state, onComplete, toast }) { const h = state.human; const [active, setActive] = useState(null); const [questions, setQuestions] = useState([]); const [answers, setAnswers] = useState({}); const [submitted, setSubmitted] = useState(false); const [score, setScore] = useState(null); const start = (test) => { const rng = mulberry32(Math.floor(Math.random()*1e9)); setQuestions(shuffle(MOCK_BANK, rng).slice(0, test.questions)); setAnswers({}); setSubmitted(false); setScore(null); setActive(test); }; const submit = () => { let correct = 0; questions.forEach((q, i) => { if (answers[i] === q.a) correct += 1; }); const pct = correct / questions.length; setScore({ correct, total: questions.length, pct }); setSubmitted(true); if (pct > 0.8) { const xp = onComplete('mock', active.id, active.xp, { score: pct }); toast(`+${xp} XP · Mock Test passed (${Math.round(pct*100)}%)`); } else toast(`Score ${Math.round(pct*100)}% — need >80%.`); }; return ( <div className="ac-fade"> <Section title="Mock Tests" sub="Score strictly above 80% to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))' }}> {MOCK_TESTS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>📝</div> <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin Test</button> </Card> ))} </div> </Section> {active && ( <div className="ac-modal-bg"> <div className="ac-modal"> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 12 }}> <div style={{ fontSize: 18, fontWeight: 700 }}>{active.name}</div> {!submitted && <button className="ac-btn" onClick={() => setActive(null)}>Exit</button>} </div> {!submitted ? ( <div> {questions.map((q, i) => ( <div key={i} style={{ marginBottom: 18 }}> <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{i+1}. {q.q}</div> <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr' }}> {q.opts.map((opt, oi) => ( <button key={oi} className="ac-btn" style={{ textAlign:'left', padding:'8px 10px', fontSize: 12, background: answers[i]===oi?S.lavender+'22':S.panel2, borderColor: answers[i]===oi?S.lavender:S.border }} onClick={() => setAnswers({...answers, [i]: oi})}> {String.fromCharCode(65+oi)}. {opt} </button> ))} </div> </div> ))} <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={submit}> Submit ({Object.keys(answers).length}/{questions.length}) </button> </div> ) : ( <div style={{ textAlign:'center', padding: 16 }}> <div style={{ fontSize: 36, marginBottom: 12 }}>{score.pct > 0.8 ? '🏆' : '📖'}</div> <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{score.correct}/{score.total} ({Math.round(score.pct*100)}%)</div> <div style={{ fontSize: 14, color: score.pct > 0.8 ? S.success : S.danger, fontWeight: 600, marginBottom: 16 }}> {score.pct > 0.8 ? `Passed! +${calcTaskXp(active.xp, h, 'mock')} XP` : 'Failed — need >80%.'} </div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActive(null)}>Close</button> </div> )} </div> </div> )} </div> ); } 
 
@@ -1366,6 +1403,7 @@
             { id:'dashboard', label:'Dashboard', icon:'🏠' }, 
             { id:'assignments', label:'Assignments', icon:'📐' }, 
             { id:'studying', label:'Studying', icon:'📚' }, 
+            { id:'othertasks', label:'Other Tasks', icon:'🧹' }, 
             { id:'mocks', label:'Mock Tests', icon:'📝' }, 
             { id:'tournaments', label:'Tournaments', icon:'🏆' }, 
             { id:'ranks', label:'Titles & Tiers', icon:'🏅' }, 
@@ -1559,6 +1597,7 @@
                         {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onNav={setTab} onOpenProfile={setProfileModalId} />} 
                         {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
+                        {tab === 'othertasks' && <OtherTasksTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'tournaments' && <TournamentsTab state={state} catalog={catalog} onJoin={handleJoin} toast={toastMsg} onOpenProfile={setProfileModalId} />} 
                         {tab === 'ranks' && <TitlesTab state={state} lbTP={lbTP} />} 
