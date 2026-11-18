@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academia - 1000 Player Competition</title>
+    <title>Academia - Season RISE</title>
     
     <!-- React, ReactDOM, and Babel Standalone CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -37,7 +37,7 @@
 </head>
 <body>
     <div id="root">
-        <div id="loading">Loading Academia... (Please wait a few seconds)</div>
+        <div id="loading">Loading Academia: Season RISE...</div>
     </div>
 
     <script>
@@ -70,7 +70,7 @@
         const weekKey = (d=new Date()) => { const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-t.getDay()); return todayKey(t); }; 
         const fmtInt = n => Math.floor(n).toLocaleString('en-US'); 
         const fmtShort = n => { n=Math.floor(n); if(n>=1e12)return (n/1e12).toFixed(2)+'T'; if(n>=1e9)return (n/1e9).toFixed(2)+'B'; if(n>=1e6)return (n/1e6).toFixed(2)+'M'; if(n>=1e3)return (n/1e3).toFixed(1)+'K'; return n.toString(); }; 
-        const fmtTp = n => n.toFixed(2); 
+        const fmtRp = n => Math.round(n).toLocaleString('en-US'); 
         const fmtTime = (ms) => { const s=Math.max(0,Math.floor(ms/1000)); const d=Math.floor(s/86400); const h=Math.floor((s%86400)/3600); const m=Math.floor((s%3600)/60); if(d>0) return `${d}d ${h}h`; if(h>0) return `${h}h ${m}m`; if(m>0) return `${m}m ${s%60}s`; return `${s}s`; }; 
         const fmtTime12 = ms => new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); 
 
@@ -84,7 +84,7 @@
             "Chasing perfection one page at a time.",
             "Fueled by caffeine and relentless ambition.",
             "Quietly outworking the competition in the library corner.",
-            "Tournament strategist with an eye for the crown.",
+            "Ranked strategist with an eye for the crown.",
             "Early mornings, deep focus, flawless execution.",
             "Striving to reach the apex of the academic ladder."
         ];
@@ -105,16 +105,25 @@
             LT3:{eggs:1,potions:['combo_craze']}, 
             HT3:{eggs:2,potions:['golden_study']}, 
             LT2:{eggs:2,potions:['double_xp','golden_study']}, 
-            LT2:{eggs:3,potions:['double_xp','combo_craze']}, 
+            HT2:{eggs:3,potions:['double_xp','combo_craze']}, 
             LT1:{eggs:4,potions:['golden_study','golden_study','double_xp']}, 
             HT1:{eggs:6,potions:['double_xp','double_xp','golden_study','combo_craze']} 
         };
         const EGG_UNLOCK = [0, 5, 10, 20, 30, 40];
         const ABILITY_TXT = { xp_all:'Boosts XP from every task', xp_assign:'Boosts XP from assignments', xp_study:'Boosts XP from studying and recall', xp_recall:'Boosts XP from studying and recall', xp_mock:'Boosts XP from mock tests' };
 
-        // ============================================================ // PETS, POTIONS, TASKS // ============================================================ 
+        // ============================================================ // PETS, POTIONS, TASKS & RANKED SETTINGS // ============================================================ 
         const EGGS = [ { id:'dawn', name:'Dawn Egg', pets:[ { name:'Pip', emoji:'🌱', rar:'Common', ab:'xp_assign', val:0.015, flavor:'A tiny sprout that believes in small steps.' }, { name:'Mint', emoji:'☁️', rar:'Uncommon', ab:'xp_recall', val:0.025, flavor:'A cloud who remembers everything.' }, { name:'Dawn', emoji:'🦊', rar:'Rare', ab:'xp_all', val:0.04, flavor:'A fox whose tail is the color of first light.' }, { name:'Aura', emoji:'🦅', rar:'Epic', ab:'xp_all', val:0.07, flavor:'A bird that circles the mind of scholars.' }, { name:'Sol', emoji:'🕊️', rar:'Super Rare', ab:'xp_all', val:0.12, flavor:'A phoenix born from the first sunrise.' } ]}, { id:'bloom', name:'Bloom Egg', pets:[ { name:'Blossom', emoji:'🌷', rar:'Common', ab:'xp_assign', val:0.015, flavor:'Opens only for those who kept studying.' }, { name:'Breeze', emoji:'🍃', rar:'Uncommon', ab:'xp_study', val:0.025, flavor:'Carries focus on the wind.' }, { name:'Clover', emoji:'🍀', rar:'Rare', ab:'xp_all', val:0.04, flavor:'A lucky rabbit.' }, { name:'Rosie', emoji:'🌹', rar:'Epic', ab:'xp_mock', val:0.09, flavor:'A rose spirit that blooms for mock tests.' }, { name:'Elysia', emoji:'🌺', rar:'Super Rare', ab:'xp_all', val:0.13, flavor:'A legendary bloom who once tutored an empress.' } ]}, { id:'lunar', name:'Lunar Egg', pets:[ { name:'Luna', emoji:'🐈', rar:'Common', ab:'xp_assign', val:0.018, flavor:'A cat whose eyes are little moons.' }, { name:'Mochi', emoji:'🐇', rar:'Uncommon', ab:'xp_recall', val:0.03, flavor:'A bunny who memorizes everything.' }, { name:'Stella', emoji:'⭐', rar:'Rare', ab:'xp_all', val:0.045, flavor:'A star who fell in love with studying.' }, { name:'Nyx', emoji:'🌌', rar:'Epic', ab:'xp_study', val:0.1, flavor:'A galaxy spirit who concentrates focus.' }, { name:'Selene', emoji:'🌙', rar:'Super Rare', ab:'xp_all', val:0.14, flavor:'The moon-touched guardian of deep recall.' } ]}, { id:'crystal', name:'Crystal Egg', pets:[ { name:'Shard', emoji:'💠', rar:'Common', ab:'xp_assign', val:0.02, flavor:'A shard that sharpens discipline.' }, { name:'Icy', emoji:'❄️', rar:'Uncommon', ab:'xp_study', val:0.032, flavor:'A flake that never melts.' }, { name:'Glacia', emoji:'🧊', rar:'Rare', ab:'xp_all', val:0.048, flavor:'A crystal golem with a scholar\'s patience.' }, { name:'Prism', emoji:'🔮', rar:'Epic', ab:'xp_mock', val:0.1, flavor:'A prism that clarifies every question.' }, { name:'Azura', emoji:'💎', rar:'Super Rare', ab:'xp_all', val:0.15, flavor:'A diamond-bodied dragon of pure focus.' } ]}, { id:'astral', name:'Astral Egg', pets:[ { name:'Zephyr', emoji:'🌬️', rar:'Common', ab:'xp_assign', val:0.022, flavor:'A wisp that studies in silence.' }, { name:'Aria', emoji:'🎵', rar:'Uncommon', ab:'xp_recall', val:0.035, flavor:'A note that hums lessons awake.' }, { name:'Nimbus', emoji:'☁️', rar:'Rare', ab:'xp_all', val:0.05, flavor:'A storm that condenses knowledge.' }, { name:'Vega', emoji:'✨', rar:'Epic', ab:'xp_all', val:0.085, flavor:'A star spirit of singular purpose.' }, { name:'Cosmo', emoji:'🪐', rar:'Super Rare', ab:'xp_all', val:0.16, flavor:'A planet-bound familiar of scholars of old.' } ]}, { id:'nova', name:'Nova Egg', pets:[ { name:'Spark', emoji:'⚡', rar:'Common', ab:'xp_assign', val:0.025, flavor:'A spark that ignites early mornings.' }, { name:'Flare', emoji:'🔥', rar:'Uncommon', ab:'xp_study', val:0.04, flavor:'A flame that refuses to be extinguished.' }, { name:'Ember', emoji:'🕯️', rar:'Rare', ab:'xp_all', val:0.055, flavor:'A candle burning at both ends.' }, { name:'Phoenix', emoji:'🔥', rar:'Epic', ab:'xp_all', val:0.09, flavor:'A rebirth of pure academic ambition.' }, { name:'Nova', emoji:'💥', rar:'Super Rare', ab:'xp_all', val:0.18, flavor:'The supernova that ended an age of mediocrity.' } ]} ]; 
         const ALL_PETS = EGGS.flatMap((e, ei) => e.pets.map(p => ({ ...p, eggId: e.id, eggName: e.name, eggIdx: ei })));
+
+        const RANKED_MODES = [
+            { id: 'quick', name: 'Quick', hours: 1, icon: '⚡', desc: '1-hour sprint duel' },
+            { id: 'short', name: 'Short', hours: 2, icon: '🔥', desc: '2-hour focused clash' },
+            { id: 'medium', name: 'Medium', hours: 3, icon: '⚔️', desc: '3-hour standard match' },
+            { id: 'long', name: 'Long', hours: 4, icon: '🛡️', desc: '4-hour endurance trial' },
+            { id: 'extra', name: 'Extra', hours: 5, icon: '🌌', desc: '5-hour deep grind' },
+            { id: 'deadly', name: 'Deadly', hours: 6, icon: '💀', desc: '6-hour ultimate test' }
+        ];
 
         const FX = {
           muted: (() => { try { return localStorage.getItem('academia_mute') === '1'; } catch (e) { return false; } })(),
@@ -156,10 +165,7 @@
             scholars_fortune: { name:'Scholar\'s Fortune', emoji:'🍀', desc:'Doubles egg rarity luck.', dur:60*60*1000, cost:150 }, 
             streak_protector: { name:'Streak Protector', emoji:'🛡️', desc:'Protects streak from one missed day.', dur:60*60*1000, cost:120 } 
         }; 
-        const DAILY_NAMES = ['Dawn Sprint','Midday Clash','Lumen Cup','Vesper Trials','Starlit Sprint']; 
-        const MAJOR_NAMES = ['Grand Academic Open','Solar Invitational','Eclipse Championship','Lunar Masters']; 
-        const WEEKLY_NAMES = ['Apex Scholar League','Midnight Grand Prix','Celestial Cup','Arcane Gauntlet']; 
-        const MONTHLY_NAMES = ['The Ivory Crown','Grandmaster\'s Gala','Sovereign Tournament','Imperial Scholars Cup']; 
+
         const ASSIGNMENT_TASKS = [ { id:'math_page', name:'Mathematics Page', desc:'1 page of Mathematics assignment', xp:1, icon:'📐' }, { id:'english_page', name:'English Page', desc:'1 page of English assignment', xp:2, icon:'📖' }, { id:'physics_page', name:'Advanced Physics Page', desc:'1 page of Advanced Physics', xp:2, icon:'⚛️' }, { id:'highlevel_page', name:'Extra High-Level Page', desc:'1 page of Extra High-Level assignment', xp:3, icon:'🎓' }, { id:'project_hour', name:'Project Work', desc:'1 hour of project work', xp:30, icon:'🛠️', long:true } ]; 
         const STUDY_TASKS = [ { id:'recall_page', name:'Recall a Page', desc:'Recall 1 page worth of information', xp:5, icon:'📄' }, { id:'recall_problem', name:'Recall a Numerical Problem', desc:'Recall 1 numerical problem', xp:10, icon:'🧮' }, { id:'recall_defs', name:'Recall 5 Definitions', desc:'Recall 5 definitions', xp:20, icon:'📚' } ]; 
         const OTHER_TASKS = [ { id:'clean_ten', name:'Clean/Organize 10 things', desc:'Clean or organize 10 items around your space', xp:10, icon:'🧹' } ];
@@ -170,11 +176,11 @@
         const DEF_SET = [ { term:'Derivative', def:'The rate of change of a function.' }, { term:'Integral', def:'The accumulation of quantities, area under a curve.' }, { term:'Matrix', def:'A rectangular array of numbers.' }, { term:'Vector', def:'A quantity with magnitude and direction.' }, { term:'Eigenvalue', def:'Scalar λ such that Av = λv for nonzero v.' }, { term:'Photon', def:'A quantum of electromagnetic radiation.' }, { term:'Entropy', def:'A measure of disorder in a system.' }, { term:'Momentum', def:'The product of mass and velocity.' }, { term:'Catalyst', def:'Speeds reaction without being consumed.' }, { term:'Osmosis', def:'Movement of solvent across a semipermeable membrane.' } ]; 
 
         // ============================================================ // VIPs // ============================================================ 
-        const VIP_DEFS = [ { name:'Doroteya Graves', nat:'Russian', age:24, status:'University', spec:'Advanced Mathematics', personality:'Perfectionist', vipTier:'A', arch:'Perfectionist', bio:'The silent standard-bearer. Studies in cathedral silences.', sigBadge:'Obsidian Seal', initXP:[180000,220000], rate:[1400,1800] }, { name:'Iris Fujiwara', nat:'Japanese', age:22, status:'University', spec:'Theoretical Physics', personality:'Burst Grinder', vipTier:'A', arch:'Burst Grinder', bio:'Fluent in elegant sprints of genius. Disappears for days.', sigBadge:'Amethyst Iris', initXP:[170000,210000], rate:[1300,1700] }, { name:'Jin Kiyora', nat:'Japanese', age:21, status:'Entrance Exam', spec:'Applied Chemistry', personality:'Tournament Specialist', vipTier:'A', arch:'Tournament Specialist', bio:'A tournament sniper. Rarely studied, always winning.', sigBadge:'Crimson Circuit', initXP:[175000,205000], rate:[1350,1750] }, { name:'Xuebi Wang', nat:'Chinese', age:23, status:'University', spec:'Pure Mathematics', personality:'Consistent Scholar', vipTier:'B', arch:'Consistent Scholar', bio:'Quietly accumulates XP the way winter accumulates snow.', sigBadge:'Jade Lantern', initXP:[110000,145000], rate:[800,1100] }, { name:'Charles Chevalier', nat:'French', age:26, status:'University', spec:'Philosophy & Mathematics', personality:'Occasional Prodigy', vipTier:'B', arch:'Occasional Prodigy', bio:'Vanishes for weeks, returns having reinvented himself.', sigBadge:'Silver Fleur', initXP:[100000,135000], rate:[750,1000] }, { name:'Dawn Murasaki', nat:'Japanese', age:20, status:'Entrance Exam', spec:'English Literature', personality:'Early Bird', vipTier:'B', arch:'Early Bird', bio:'First light, first page. Studies before the birds.', sigBadge:'Rose Dawn', initXP:[105000,140000], rate:[780,1050] }, { name:'Skyla Ravencroft', nat:'American', age:25, status:'University', spec:'Astrophysics', personality:'Night Owl', vipTier:'B', arch:'Night Owl', bio:'Sleepless genius. Best work at 3am under desk lamps.', sigBadge:'Obsidian Wing', initXP:[115000,145000], rate:[850,1150] } ]; 
+        const VIP_DEFS = [ { name:'Doroteya Graves', nat:'Russian', age:24, status:'University', spec:'Advanced Mathematics', personality:'Perfectionist', vipTier:'A', arch:'Perfectionist', bio:'The silent standard-bearer. Studies in cathedral silences.', sigBadge:'Obsidian Seal', initXP:[180000,220000], rate:[1400,1800] }, { name:'Iris Fujiwara', nat:'Japanese', age:22, status:'University', spec:'Theoretical Physics', personality:'Burst Grinder', vipTier:'A', arch:'Burst Grinder', bio:'Fluent in elegant sprints of genius. Disappears for days.', sigBadge:'Amethyst Iris', initXP:[170000,210000], rate:[1300,1700] }, { name:'Jin Kiyora', nat:'Japanese', age:21, status:'Entrance Exam', spec:'Applied Chemistry', personality:'Ranked Specialist', vipTier:'A', arch:'Ranked Specialist', bio:'A ranked sniper. Rarely studied, always winning.', sigBadge:'Crimson Circuit', initXP:[175000,205000], rate:[1350,1750] }, { name:'Xuebi Wang', nat:'Chinese', age:23, status:'University', spec:'Pure Mathematics', personality:'Consistent Scholar', vipTier:'B', arch:'Consistent Scholar', bio:'Quietly accumulates XP the way winter accumulates snow.', sigBadge:'Jade Lantern', initXP:[110000,145000], rate:[800,1100] }, { name:'Charles Chevalier', nat:'French', age:26, status:'University', spec:'Philosophy & Mathematics', personality:'Occasional Prodigy', vipTier:'B', arch:'Occasional Prodigy', bio:'Vanishes for weeks, returns having reinvented himself.', sigBadge:'Silver Fleur', initXP:[100000,135000], rate:[750,1000] }, { name:'Dawn Murasaki', nat:'Japanese', age:20, status:'Entrance Exam', spec:'English Literature', personality:'Early Bird', vipTier:'B', arch:'Early Bird', bio:'First light, first page. Studies before the birds.', sigBadge:'Rose Dawn', initXP:[105000,140000], rate:[780,1000] }, { name:'Skyla Ravencroft', nat:'American', age:25, status:'University', spec:'Astrophysics', personality:'Night Owl', vipTier:'B', arch:'Night Owl', bio:'Sleepless genius. Best work at 3am under desk lamps.', sigBadge:'Obsidian Wing', initXP:[115000,145000], rate:[850,1150] } ]; 
         const ARCHETYPES = [ 
             { id:'consistent', name:'Consistent Scholar', rateMul:[0.7,1.1], varMul:0.2, joinMul:0.9, tComp:1.0, peakHour:14 }, 
             { id:'burst', name:'Burst Grinder', rateMul:[0.4,1.5], varMul:0.9, joinMul:0.8, tComp:1.0, peakHour:20 }, 
-            { id:'tspec', name:'Tournament Specialist', rateMul:[0.5,0.9], varMul:0.4, joinMul:1.6, tComp:1.4, peakHour:18 }, 
+            { id:'tspec', name:'Ranked Specialist', rateMul:[0.5,0.9], varMul:0.4, joinMul:1.6, tComp:1.4, peakHour:18 }, 
             { id:'perfect', name:'Perfectionist', rateMul:[0.8,1.15], varMul:0.15, joinMul:0.85, tComp:1.1, peakHour:10 }, 
             { id:'night', name:'Night Owl', rateMul:[0.6,1.2], varMul:0.5, joinMul:1.0, tComp:1.0, peakHour:2 }, 
             { id:'early', name:'Early Bird', rateMul:[0.65,1.1], varMul:0.35, joinMul:1.0, tComp:1.0, peakHour:6 }, 
@@ -214,14 +220,13 @@
                 const u = makeUsername(v.name, usedUsers); 
                 const initXP = Math.floor(rand(rng, v.initXP[0], v.initXP[1])); 
                 const rate = Math.floor(rand(rng, v.rate[0], v.rate[1])); 
-                const initTP = Math.floor(rand(rng, v.vipTier==='A'?280:140, v.vipTier==='A'?480:280)); 
-                const tpRate = rand(rng, v.vipTier==='A'?1.4:0.7, v.vipTier==='A'?2.2:1.5); 
+                const initRP = Math.floor(rand(rng, v.vipTier==='A'?2150:1850, v.vipTier==='A'?2550:2150)); 
                 const reg = now - Math.floor(rand(rng, 300, 1200)) * DAY; 
                 players.push({ 
                     id: 'p'+(i+1), name: v.name, username: u, nationality: v.nat, age: v.age, status: v.status, specialization: v.spec, personality: v.personality, vip: true, vipTier: v.vipTier, sigBadge: v.sigBadge, bio: v.bio, registerDate: reg, 
                     avatar: pick(rng, AVATARS), motto: pick(rng, MOTTOS), favSubject: v.spec,
                     petCollection: shuffle(EGGS, rng).slice(0, randInt(rng, 2, 4)).map(e => { const pet = pick(rng, e.pets); return { eggId: e.id, petName: pet.name, rarity: pet.rar, acquired: now - randInt(rng,5,200)*DAY }; }), 
-                    aiProfile: { archetype: v.personality, dailyXpAvg: rate, dailyTpAvg: tpRate, variability: 0.3, joinTendency: v.vipTier==='A'?0.85:0.7, tournamentCompetitiveness: 1.2, initialXP: initXP, initialTP: initTP, peakHour: 14 } 
+                    aiProfile: { archetype: v.personality, dailyXpAvg: rate, variability: 0.3, joinTendency: v.vipTier==='A'?0.85:0.7, competitiveness: 1.2, initialXP: initXP, initialRP: initRP, peakHour: 14 } 
                 }); 
             }); 
 
@@ -250,13 +255,12 @@
                 const dailyRate = Math.floor(rand(rng, 25, 400) * arch.rateMul[1] * ageFactor / 2 + rand(rng, 10, 200)); 
                 const accountAgeDays = (now - reg) / DAY; 
                 const initXP = Math.max(0, Math.floor(dailyRate * accountAgeDays * rand(rng, 0.5, 1.1))); 
-                const initTP = Math.max(0, Math.floor(rand(rng, 0, 80) * (1 + accountAgeDays/300) * arch.joinMul)); 
-                const tpRate = rand(rng, 0.03, 0.4) * arch.joinMul; 
+                const initRP = Math.max(100, Math.floor(rand(rng, 500, 1800) * (0.7 + arch.tComp * 0.3))); 
                 
                 players.push({ 
                     id: 'p'+(made+1), name, username: u, nationality: NAT_NAMES[origin], age, status, specialization: pick(rng, specPool), personality: arch.name, vip: false, registerDate: reg, petCollection: [], 
                     avatar: pick(rng, AVATARS), motto: pick(rng, MOTTOS), favSubject: pick(rng, specPool), bio: pick(rng, BIOS),
-                    aiProfile: { archetype: arch.name, dailyXpAvg: Math.max(20, dailyRate), dailyTpAvg: tpRate, variability: 0.3 + arch.varMul * rand(rng, 0.4, 1.2), joinTendency: clamp(arch.joinMul * rand(rng, 0.4, 1.0), 0.05, 0.95), tournamentCompetitiveness: arch.tComp || rand(rng, 0.7, 1.3), initialXP: initXP, initialTP: initTP, peakHour: arch.peakHour } 
+                    aiProfile: { archetype: arch.name, dailyXpAvg: Math.max(20, dailyRate), variability: 0.3 + arch.varMul * rand(rng, 0.4, 1.2), joinTendency: clamp(arch.joinMul * rand(rng, 0.4, 1.0), 0.05, 0.95), competitiveness: arch.tComp || rand(rng, 0.7, 1.3), initialXP: initXP, initialRP: initRP, peakHour: arch.peakHour } 
                 }); 
                 made++; 
             } 
@@ -264,19 +268,22 @@
         } 
 
         // ============================================================ // STATE & PERSISTENCE // ============================================================ 
-        const SAVE_KEY = 'academia_save_v1'; 
-        const STATE_VERSION = 3; 
+        const SAVE_KEY = 'academia_rise_v1'; 
+        const STATE_VERSION = 4; 
         
         function initHumanState() { 
             const now = Date.now(); 
             return { 
-                name: 'Aria Nakamura', xp: 0, tp: 0, combo: 0, comboProgress: 0, comboExpiry: 0, highestCombo: 0, streak: 0, longestStreak: 0, lastTaskDay: null, tasksCompleted: 0, assignmentsCompleted: 0, recalledPages: 0, numericalProblems: 0, definitionsRecalled: 0, mockTestsCompleted: 0, mockScoreSum: 0, tournamentsJoined: 0, tournamentVictories: 0, 
+                name: 'Aria Nakamura', xp: 0, rp: 1000, combo: 0, comboProgress: 0, comboExpiry: 0, highestCombo: 0, streak: 0, longestStreak: 0, lastTaskDay: null, tasksCompleted: 0, assignmentsCompleted: 0, recalledPages: 0, numericalProblems: 0, definitionsRecalled: 0, mockTestsCompleted: 0, mockScoreSum: 0, 
+                rankedWins: 0, rankedLosses: 0, rankedDraws: 0,
+                activeMatch: null,
+                opponentHistory: {},
                 quests: { daily: { date: null, progress: {}, claimed: {} }, weekly: { week: null, progress: {}, claimed: {} } }, 
                 inventory: { eggs: 0, potions: [{ type: 'double_xp', quantity: 2 }, { type: 'golden_study', quantity: 1 }], pets: [] }, 
                 equippedPet: null, activePotion: null, 
-                dailyStats: { date: todayKey(), tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, tournamentsJoined: 0, comboMax: 0 }, 
-                weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, tournamentWins: 0 }, 
-                careerHistory: [], tournamentJoins: {}, tournamentProgress: {}, highestTitle: 0, highestTier: 'LT4', tierHistory: [], dailyXpLog: {}, 
+                dailyStats: { date: todayKey(), tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, rankedMatches: 0, comboMax: 0 }, 
+                weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, rankedWins: 0 }, 
+                careerHistory: [], highestTitle: 0, highestTier: 'LT4', tierHistory: [], dailyXpLog: {}, 
                 customization: { frame:'default', color:'#c4b5fd', badge:'⭐', avatar:'🦊', motto:'Focus & Discipline', bio:'Aiming for the top.' }, 
                 lastSave: now, lastTick: now 
             }; 
@@ -289,7 +296,7 @@
                 const rng = mulberry32(hashStr(p.id));
                 aiState[p.id] = { 
                     xp: p.aiProfile.initialXP, 
-                    tp: p.aiProfile.initialTP, 
+                    rp: p.aiProfile.initialRP, 
                     energy: rand(rng, 0.7, 1.3), 
                     streak: randInt(rng, 0, 15), 
                     offUntil: 0, 
@@ -298,7 +305,7 @@
             } 
             const human = initHumanState(); 
             human.highestTitle = 0; 
-            return { version: STATE_VERSION, createdAt: Date.now(), lastTick: Date.now(), human, ai: aiState, profiles: {}, tournaments: {}, pendingResolutions: [] }; 
+            return { version: STATE_VERSION, createdAt: Date.now(), lastTick: Date.now(), human, ai: aiState, profiles: {}, recentMatches: [] }; 
         } 
 
         function loadState(catalog) { 
@@ -310,8 +317,8 @@
                 if (!s.human || !s.ai) return null; 
                 const defaults = initHumanState(); 
                 s.human = { ...defaults, ...s.human }; 
-                if (!s.tournaments) s.tournaments = {}; 
                 if (!s.profiles) s.profiles = {}; 
+                if (!s.recentMatches) s.recentMatches = [];
                 return s; 
             } catch (e) { 
                 console.warn('Save load failed:', e); 
@@ -338,7 +345,7 @@
             return { ...base, ...override };
         }
 
-        // ============================================================ // CALCULATIONS // ============================================================ 
+        // ============================================================ // ELO RANKED RP ENGINE & CALCULATIONS // ============================================================ 
         function computeTitleIdx(xp) { let idx = 0; for (let i = 0; i < TITLE_XP.length; i++) if (xp >= TITLE_XP[i]) idx = i; return idx; } 
         function computeTierForRank(rank) { if (rank <= 125) return 'HT1'; if (rank <= 250) return 'LT1'; if (rank <= 375) return 'HT2'; if (rank <= 500) return 'LT2'; if (rank <= 625) return 'HT3'; if (rank <= 750) return 'LT3'; if (rank <= 875) return 'HT4'; return 'LT4'; } 
         function comboMultiplier(combo) { if (combo <= 0) return 1; if (combo <= 10) return 1 + combo * 0.05; if (combo <= 25) return 1.5 + (combo - 10) * 0.08; if (combo <= 50) return 2.7 + (combo - 25) * 0.12; if (combo <= 100) return 5.7 + (combo - 50) * 0.22; return 16.7 * Math.pow(1.02, combo - 100); } 
@@ -347,79 +354,94 @@
         function potionBonus(human) { if (!human.activePotion) return { mult:1, comboDiscount:false }; const p = human.activePotion; if (Date.now() > p.expires) return { mult:1, comboDiscount:false }; if (p.type === 'double_xp') return { mult:2, comboDiscount:false }; if (p.type === 'golden_study') return { mult:1.5, comboDiscount:false }; if (p.type === 'combo_craze') return { mult:1, comboDiscount:true }; return { mult:1, comboDiscount:false }; } 
         function calcTaskXp(baseXp, human, taskType) { const comboMult = comboMultiplier(human.combo); const pb = petBonus(human); let petBonusVal = 0; if (pb.def) { if (pb.def.ab === 'xp_all') petBonusVal = pb.val; else if (pb.def.ab === 'xp_assign' && taskType === 'assignment') petBonusVal = pb.val; else if (pb.def.ab === 'xp_study' && taskType === 'study') petBonusVal = pb.val; else if (pb.def.ab === 'xp_recall' && taskType === 'study') petBonusVal = pb.val; else if (pb.def.ab === 'xp_mock' && taskType === 'mock') petBonusVal = pb.val; } const pBonus = potionBonus(human); return Math.max(1, Math.floor(baseXp * comboMult * (1 + petBonusVal) * pBonus.mult)); } 
 
-        // ============================================================ // TOURNAMENTS // ============================================================ 
-        function generateTournaments(fromDate, days) { 
-            const tours = {}; const start = new Date(fromDate); start.setHours(0,0,0,0); 
-            for (let d = 0; d < days; d++) { 
-                const day = new Date(start); day.setDate(day.getDate() + d); const dow = day.getDay(); const isSat = dow === 6; 
-                const slots = isSat ? [5, 8, 11, 14, 17] : [14, 15, 16, 17.5, 19]; const durs = [30, 45, 60, 45, 60]; 
-                for (let i = 0; i < 5; i++) { 
-                    const s = new Date(day); s.setHours(Math.floor(slots[i]), Math.round((slots[i]%1)*60), 0, 0); 
-                    const e = new Date(s.getTime() + durs[i]*60000); 
-                    tours[`d-${todayKey(day)}-${i}`] = { id:`d-${todayKey(day)}-${i}`, type:'daily', name: DAILY_NAMES[i], start: s.getTime(), end: e.getTime(), baseTP:5, resolved:false, results:null, winner:null }; 
-                } 
-                if (d % 2 === 0) { 
-                    const s = new Date(day); s.setHours(15, 0, 0, 0); 
-                    tours[`m-${todayKey(day)}`] = { id:`m-${todayKey(day)}`, type:'major', name: MAJOR_NAMES[Math.floor(d/2) % MAJOR_NAMES.length], start: s.getTime(), end: s.getTime()+180*60000, baseTP:50, resolved:false, results:null, winner:null }; 
-                } 
-                if (dow === 0) { 
-                    const s = new Date(day); s.setHours(18, 0, 0, 0); 
-                    tours[`w-${todayKey(day)}`] = { id:`w-${todayKey(day)}`, type:'weekly', name: WEEKLY_NAMES[Math.floor(d/7) % WEEKLY_NAMES.length], start: s.getTime(), end: s.getTime()+240*60000, baseTP:100, resolved:false, results:null, winner:null }; 
-                } 
-                if (day.getDate() === 1) { 
-                    const s = new Date(day); s.setHours(19, 0, 0, 0); 
-                    tours[`mo-${day.getFullYear()}-${day.getMonth()}`] = { id:`mo-${day.getFullYear()}-${day.getMonth()}`, type:'monthly', name: MONTHLY_NAMES[day.getMonth() % MONTHLY_NAMES.length], start: s.getTime(), end: s.getTime()+240*60000, baseTP:300, resolved:false, results:null, winner:null }; 
-                } 
-            } 
-            return tours; 
-        } 
-
-        function tpReward(base, n, rank) {
-            if (n <= 1) return base;
-            const fraction = (n - rank) / (n - 1); 
-            const raw = (fraction * 200 - 100) * (base / 50); 
-            return Math.round(raw * 100) / 100;
+        function calcEloTransfer(winnerRp, loserRp, repeatCount = 0) {
+            const K = 40;
+            const P = 1 / (1 + Math.pow(10, (loserRp - winnerRp) / 400));
+            const farmPenalty = 1 / (1 + repeatCount * 0.5); // Progressively reduces rewards for repeated farming
+            const transfer = Math.round(K * (1 - P) * farmPenalty);
+            return Math.max(1, transfer);
         }
 
-        const fmtSigned = n => (n >= 0 ? '+' : '') + n.toFixed(2);
-
-        function computeAIParticipants(t, catalog, state) { 
-            const seed = hashStr(t.id); 
-            const rng = mulberry32(seed); 
-            const durHours = (t.end - t.start) / 3600000; 
-            const results = []; 
-            for (const p of catalog) { 
-                if (p.id === 'human') continue; 
-                const prof = p.aiProfile; 
-                const aiData = state.ai[p.id];
-                if (aiData && aiData.retired) continue;
-                const joinChance = prof.joinTendency * (t.type === 'daily' ? 0.9 : t.type === 'major' ? 1.1 : t.type === 'weekly' ? 1.2 : 1.3); 
-                if (rng() < joinChance) { 
-                    const energy = aiData ? aiData.energy : 1.0;
-                    const baseXP = prof.dailyXpAvg * (durHours / 24) * 2.2 * energy; 
-                    const roll = 0.4 + rng() * (0.6 + prof.variability * 0.8); 
-                    const comp = prof.tournamentCompetitiveness || 1; 
-                    results.push({ pid: p.id, xp: Math.floor(baseXP * roll * comp) }); 
-                } 
-            } 
-            return results; 
-        } 
-
-        function computeRanking(t, catalog, hp, state) {
-            const p = computeAIParticipants(t, catalog, state);
-            if (typeof hp[t.id] === 'number') p.push({ pid: 'human', xp: hp[t.id] });
-            p.sort((a, b) => b.xp - a.xp || a.pid.localeCompare(b.pid));
-            return p.map((r, i) => ({ ...r, rank: i + 1, tp: tpReward(t.baseTP, p.length, i + 1) }));
+        function findClosestOpponent(humanRp, state, catalog) {
+            const candidates = catalog.filter(p => p.id !== 'human' && !state.ai[p.id]?.retired);
+            candidates.sort((a, b) => {
+                const diffA = Math.abs((state.ai[a.id]?.rp || 1000) - humanRp);
+                const diffB = Math.abs((state.ai[b.id]?.rp || 1000) - humanRp);
+                return diffA - diffB;
+            });
+            const topPool = candidates.slice(0, 12);
+            return pick(Math.random, topPool);
         }
 
-        function resolveTournament(t, catalog, hp, ai, state) {
-            const all = computeRanking(t, catalog, hp, state);
-            if (ai) for (const r of all) if (ai[r.pid]) ai[r.pid].tp = Math.max(0, ai[r.pid].tp + r.tp);
-            const me = all.find(r => r.pid === 'human');
-            return { ...t, resolved: true, results: all.slice(0, 20), winner: all[0]?.pid, participantCount: all.length, humanTp: me ? me.tp : 0 };
+        function resolveRankedMatch(state, catalog) {
+            const h = state.human;
+            const m = h.activeMatch;
+            if (!m) return null;
+
+            const oppId = m.opponentId;
+            const oppState = state.ai[oppId];
+            const oppRp = oppState ? oppState.rp : 1000;
+            const humanRp = h.rp;
+
+            const myXp = m.humanXp || 0;
+            const oppXp = Math.floor(m.targetOppXp);
+
+            let outcome = 'draw';
+            let transfer = 0;
+
+            if (myXp > oppXp) {
+                outcome = 'win';
+                const repeats = h.opponentHistory[oppId] || 0;
+                transfer = calcEloTransfer(humanRp, oppRp, repeats);
+                const actualGain = Math.min(transfer, oppRp); // Cannot drop opponent below 0
+                h.rp += actualGain;
+                if (oppState) oppState.rp = Math.max(0, oppState.rp - actualGain);
+                h.rankedWins += 1;
+                h.weeklyStats.rankedWins = (h.weeklyStats.rankedWins || 0) + 1;
+                h.opponentHistory[oppId] = repeats + 1;
+                transfer = actualGain;
+            } else if (oppXp > myXp) {
+                outcome = 'loss';
+                transfer = calcEloTransfer(oppRp, humanRp, 0);
+                const actualLoss = Math.min(transfer, humanRp); // Cannot drop human below 0
+                h.rp = Math.max(0, h.rp - actualLoss);
+                if (oppState) oppState.rp += actualLoss;
+                h.rankedLosses += 1;
+                transfer = -actualLoss;
+            } else {
+                outcome = 'draw';
+                transfer = 0;
+                h.rankedDraws += 1;
+            }
+
+            h.activeMatch = null;
+            const oppProf = getProfile(oppId, catalog, state);
+            const record = {
+                ts: Date.now(),
+                mode: m.modeName,
+                hours: m.hours,
+                oppId,
+                oppName: oppProf.name,
+                myXp,
+                oppXp,
+                outcome,
+                rpDelta: transfer
+            };
+
+            state.recentMatches.unshift(record);
+            if (state.recentMatches.length > 50) state.recentMatches.pop();
+
+            h.careerHistory.push({
+                ts: Date.now(),
+                type: outcome === 'win' ? 'ranked_win' : 'ranked_match',
+                note: `${m.modeName} Ranked vs ${oppProf.name} (${outcome.toUpperCase()})`,
+                rp: transfer
+            });
+
+            return record;
         }
 
-        // ============================================================ // ADVANCED AI SIMULATION // ============================================================ 
+        // ============================================================ // ADVANCED AI SIMULATION & BACKGROUND ELO // ============================================================ 
         function getActivityMultiplier(hour, weekday, peakHour) {
             const dist = Math.abs(hour - peakHour);
             const circadian = Math.max(0.1, 1 - Math.min(dist, 24 - dist) / 12);
@@ -432,7 +454,6 @@
             const totalHours = elapsedMs / 3600000;
             const steps = Math.min(168, Math.max(1, Math.floor(totalHours))); 
             const stepHours = totalHours / steps;
-            const rngBase = mulberry32(Math.floor(now / 3600000));
 
             for (let s = 0; s < steps; s++) {
                 const simDate = new Date(now - (steps - s) * stepHours * 3600000);
@@ -440,19 +461,17 @@
                 const weekday = simDate.getDay();
                 const bucket = Math.floor(simDate.getTime() / 3600000);
 
+                // XP Grinding
                 for (const p of catalog) {
                     if (p.id === 'human') continue;
                     const cur = state.ai[p.id]; 
-                    if (!cur) continue;
-                    if (cur.retired) continue;
-
+                    if (!cur || cur.retired) continue;
                     if (simDate.getTime() < cur.offUntil) continue;
 
                     const pr = p.aiProfile;
                     const rng = mulberry32(hashStr(p.id + '_' + bucket));
 
                     cur.energy = clamp(cur.energy + (rng() - 0.48) * 0.1, 0.3, 1.8);
-                    
                     if (rng() < 0.005) {
                         cur.offUntil = simDate.getTime() + randInt(rng, 12, 48) * 3600000;
                         continue;
@@ -460,10 +479,37 @@
 
                     const actMul = getActivityMultiplier(hour, weekday, pr.peakHour || 14);
                     const varMul = Math.max(0.05, 1 + (rng() - 0.5) * pr.variability * 2);
-                    
                     const gain = pr.dailyXpAvg * (stepHours / 24) * actMul * varMul * cur.energy;
                     cur.xp += Math.max(0, gain);
-                    cur.tp += pr.dailyTpAvg * (stepHours / 24) * actMul * 0.3;
+                }
+
+                // Simulated AI vs AI Ranked ELO Battles
+                const duelRng = mulberry32(bucket + 999);
+                const activeAIs = catalog.filter(p => p.id !== 'human' && !state.ai[p.id]?.retired);
+                activeAIs.sort((a, b) => (state.ai[b.id]?.rp || 1000) - (state.ai[a.id]?.rp || 1000));
+                const duelsCount = Math.min(40, Math.floor(activeAIs.length / 25));
+
+                for (let d = 0; d < duelsCount; d++) {
+                    const idx1 = randInt(duelRng, 0, activeAIs.length - 2);
+                    const idx2 = Math.min(activeAIs.length - 1, idx1 + randInt(duelRng, 1, 8));
+                    const p1 = activeAIs[idx1];
+                    const p2 = activeAIs[idx2];
+                    const s1 = state.ai[p1.id];
+                    const s2 = state.ai[p2.id];
+                    if (!s1 || !s2) continue;
+
+                    const score1 = p1.aiProfile.dailyXpAvg * s1.energy * rand(duelRng, 0.5, 1.5);
+                    const score2 = p2.aiProfile.dailyXpAvg * s2.energy * rand(duelRng, 0.5, 1.5);
+
+                    if (score1 > score2) {
+                        const tr = Math.min(calcEloTransfer(s1.rp, s2.rp, 0), s2.rp);
+                        s1.rp += tr;
+                        s2.rp = Math.max(0, s2.rp - tr);
+                    } else if (score2 > score1) {
+                        const tr = Math.min(calcEloTransfer(s2.rp, s1.rp, 0), s1.rp);
+                        s2.rp += tr;
+                        s1.rp = Math.max(0, s1.rp - tr);
+                    }
                 }
             }
 
@@ -499,40 +545,21 @@
             const elapsed = now - (state.lastTick || now); 
             state.lastTick = now; 
             
-            const startDate = new Date(); startDate.setDate(startDate.getDate() - 2); 
-            const generated = generateTournaments(startDate, 8); 
-            for (const id in generated) if (!state.tournaments[id]) state.tournaments[id] = generated[id]; 
-            
-            for (const id in state.tournaments) { 
-                const t = state.tournaments[id]; 
-                if (!t.resolved && now > t.end) { 
-                    const resolved = resolveTournament(t, catalog, state.human.tournamentProgress, state.ai, state); 
-                    state.tournaments[id] = resolved; 
-                    const humanReward = resolved.humanTp || 0; 
-                    const participated = state.human.tournamentJoins[id]; 
-                    if (participated) { 
-                        if (humanReward) state.human.tp = Math.max(0, round2(state.human.tp + humanReward)); 
-                        if (resolved.winner === 'human') { 
-                            state.human.tournamentVictories += 1; 
-                            state.human.weeklyStats.tournamentWins = (state.human.weeklyStats.tournamentWins || 0) + 1; 
-                            state.human.careerHistory.push({ ts: now, type: 'tournament_win', note: `Won ${resolved.name}`, tp: humanReward }); 
-                        } else { 
-                            state.human.careerHistory.push({ ts: now, type: 'tournament', note: `${resolved.name}`, tp: humanReward }); 
-                        } 
-                    } 
-                } 
-            } 
+            // Check if active Ranked Match has ended
+            if (state.human.activeMatch && now >= state.human.activeMatch.end) {
+                resolveRankedMatch(state, catalog);
+            }
 
             if (elapsed > 0 || force) simulateAIsStep(state, catalog, elapsed); 
             
             const today = todayKey(); 
             if (state.human.dailyStats.date !== today) { 
-                state.human.dailyStats = { date: today, tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, tournamentsJoined: 0, comboMax: 0 }; 
+                state.human.dailyStats = { date: today, tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, rankedMatches: 0, comboMax: 0 }; 
                 state.human.quests.daily = { date: today, progress: {}, claimed: {} }; 
             } 
             const wk = weekKey(); 
             if (state.human.weeklyStats.week !== wk) { 
-                state.human.weeklyStats = { week: wk, tasks: 0, xp: 0, mockTests: 0, tournamentWins: 0 }; 
+                state.human.weeklyStats = { week: wk, tasks: 0, xp: 0, mockTests: 0, rankedWins: 0 }; 
                 state.human.quests.weekly = { week: wk, progress: {}, claimed: {} }; 
             } 
             
@@ -546,12 +573,10 @@
                 const diffDays = Math.floor((todayDate - lastDay) / (24*3600*1000)); 
                 if (diffDays > 1) state.human.streak = 0; 
             } 
-
-            for (const id in state.tournaments) if (state.tournaments[id].end < now - 30*24*3600*1000) delete state.tournaments[id]; 
             
-            const tpList = catalog.map(p => ({ id: p.id, tp: p.id === 'human' ? state.human.tp : (state.ai[p.id]?.tp ?? 0) })).sort((a,b) => b.tp - a.tp); 
-            const humanRankTP = tpList.findIndex(x => x.id === 'human') + 1; 
-            const newTier = computeTierForRank(humanRankTP); 
+            const rpList = catalog.map(p => ({ id: p.id, rp: p.id === 'human' ? state.human.rp : (state.ai[p.id]?.rp ?? 0) })).sort((a,b) => b.rp - a.rp); 
+            const humanRankRP = rpList.findIndex(x => x.id === 'human') + 1; 
+            const newTier = computeTierForRank(humanRankRP); 
             const tierOrder = { 'LT4':0,'HT4':1,'LT3':2,'HT3':3,'LT2':4,'HT2':5,'LT1':6,'HT1':7 }; 
             
             if (tierOrder[newTier] > tierOrder[state.human.highestTier]) { 
@@ -598,13 +623,11 @@
             } 
             h.lastTaskDay = today; 
             
-            for (const tid in state.tournaments) { 
-                const t = state.tournaments[tid]; 
-                if (t.resolved) continue; 
-                if (now < t.start || now > t.end) continue; 
-                if (!h.tournamentJoins[tid]) continue; 
-                h.tournamentProgress[tid] = (h.tournamentProgress[tid] || 0) + finalXp; 
-            } 
+            // Feed XP into active Ranked Match
+            if (h.activeMatch && now < h.activeMatch.end) {
+                h.activeMatch.humanXp = (h.activeMatch.humanXp || 0) + finalXp;
+            }
+            
             h.dailyXpLog[today] = (h.dailyXpLog[today] || 0) + finalXp; 
             
             const d = h.quests.daily.progress, w = h.quests.weekly.progress; 
@@ -641,15 +664,34 @@
             return finalXp; 
         } 
 
-        function joinTournament(state, tournamentId) { 
-            const h = state.human; if (h.tournamentJoins[tournamentId]) return false; 
-            const t = state.tournaments[tournamentId]; if (!t || t.resolved) return false; 
-            if (Date.now() > t.end) return false; 
-            h.tournamentJoins[tournamentId] = true; h.tournamentsJoined += 1; 
-            h.dailyStats.tournamentsJoined = (h.dailyStats.tournamentsJoined||0)+1; 
-            h.tournamentProgress[tournamentId] = h.tournamentProgress[tournamentId] || 0; 
-            return true; 
-        } 
+        function startRankedBattle(state, catalog, mode) {
+            const h = state.human;
+            if (h.activeMatch) return false;
+
+            const opp = findClosestOpponent(h.rp, state, catalog);
+            if (!opp) return false;
+
+            const oppState = state.ai[opp.id];
+            const oppDaily = opp.aiProfile.dailyXpAvg || 100;
+            const energy = oppState ? oppState.energy : 1.0;
+            // Calculate expected XP the opponent will earn over the battle duration
+            const targetOppXp = Math.max(15, Math.floor(oppDaily * (mode.hours / 24) * 2.2 * energy * rand(Math.random, 0.75, 1.35)));
+
+            const now = Date.now();
+            h.activeMatch = {
+                id: 'rm_' + now,
+                modeId: mode.id,
+                modeName: mode.name,
+                hours: mode.hours,
+                start: now,
+                end: now + mode.hours * 3600000,
+                opponentId: opp.id,
+                humanXp: 0,
+                targetOppXp
+            };
+            h.dailyStats.rankedMatches = (h.dailyStats.rankedMatches || 0) + 1;
+            return true;
+        }
 
         function hatchEgg(state) { 
             const h = state.human; if (h.inventory.eggs <= 0) return null; 
@@ -678,9 +720,9 @@
             rows.forEach((r, i) => { r.rank = i + 1; r.titleIdx = computeTitleIdx(r.xp); r.title = TITLES[r.titleIdx]; }); 
             return rows; 
         } 
-        function buildTPLeaderboard(state, catalog) { 
-            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, tp: p.id === 'human' ? state.human.tp : (state.ai[p.id]?.tp ?? 0) })); 
-            rows.sort((a,b) => b.tp - a.tp || a.id.localeCompare(b.id)); 
+        function buildRPLeaderboard(state, catalog) { 
+            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, rp: p.id === 'human' ? state.human.rp : (state.ai[p.id]?.rp ?? 0) })); 
+            rows.sort((a,b) => b.rp - a.rp || a.id.localeCompare(b.id)); 
             rows.forEach((r, i) => { r.rank = i + 1; r.tier = computeTierForRank(r.rank); }); 
             return rows; 
         } 
@@ -736,11 +778,6 @@
                 .ac-orbs i:nth-child(1){background:#c4b5fd;top:-12vmax;left:-10vmax}
                 .ac-orbs i:nth-child(2){background:#f5b3d3;bottom:-14vmax;right:-8vmax;animation-delay:-8s}
                 .ac-orbs i:nth-child(3){background:#a5c9e8;top:35%;left:45%;animation-delay:-15s;opacity:.09}
-                .ac-card{transition:transform .2s,box-shadow .2s}
-                .ac-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(196,181,253,.15)}
-                .ac-btn:active{transform:scale(.96)}
-                .ac-grid>*{animation:fadeIn .4s backwards}
-                .ac-grid>*:nth-child(2){animation-delay:.05s}.ac-grid>*:nth-child(3){animation-delay:.1s}.ac-grid>*:nth-child(4){animation-delay:.15s}.ac-grid>*:nth-child(5){animation-delay:.2s}.ac-grid>*:nth-child(n+6){animation-delay:.25s}
                 .ac-live{animation:pulse 1.2s infinite}
                 .ac-float{animation:floaty 3s ease-in-out infinite}
                 .ac-glow{animation:floaty 3s ease-in-out infinite,glow 2.4s ease-in-out infinite}
@@ -762,30 +799,37 @@
         function YouBadge({ small }) { return <span style={{ fontSize: small ? 9 : 10, background: S.mint, color:'#08080c', padding: small?'1px 5px':'2px 7px', borderRadius: 4, fontWeight: 800 }}>YOU</span>; } 
         function RarityPill({ rarity }) { const c = RARITY_COLORS[rarity] || S.muted; return <span style={{ fontSize: 10, background: c+'22', color: c, border:`1px solid ${c}66`, padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>{rarity}</span>; } 
 
-        // ============================================================ // SAVE MODAL // ============================================================ 
-        function SaveModal({ state, onExport, onImport, onClose }) { const fileRef = useRef(null); return ( <div className="ac-modal-bg" onClick={onClose}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>💾 Save & Load</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 16, lineHeight: 1.6, padding: 12, background: S.bg2, borderRadius: 10, border: `1px solid ${S.border}` }}> <strong style={{ color: S.pink }}>Important:</strong> This game runs locally in your browser. If you clear your browser data, your progress will be lost. <strong style={{ color: S.lavender }}>Export your save file regularly</strong> to guarantee your progress is never lost. </div> <Card style={{ marginBottom: 12 }}> <div style={{ fontSize: 11, color: S.muted }}>LAST AUTO-SAVE</div> <div style={{ fontSize: 13, marginTop: 4 }}>{new Date(state.lastSave || state.createdAt || Date.now()).toLocaleString()}</div> <div style={{ fontSize: 11, color: S.muted, marginTop: 8 }}>GAME CREATED</div> <div style={{ fontSize: 13, marginTop: 4 }}>{new Date(state.createdAt).toLocaleString()}</div> </Card> <button className="ac-btn ac-btn-primary" style={{ width:'100%', marginBottom: 8 }} onClick={onExport}> ⬇ Download Save File </button> <button className="ac-btn" style={{ width:'100%', marginBottom: 8 }} onClick={() => fileRef.current?.click()}> ⬆ Load Save File </button> <input ref={fileRef} type="file" accept=".json,application/json" style={{ display:'none' }} onChange={e => { if (e.target.files?.[0]) onImport(e.target.files[0]); e.target.value = ''; }} /> <button className="ac-btn" style={{ width:'100%', marginTop: 8 }} onClick={onClose}>Close</button> </div> </div> ); } 
+        // ============================================================ // SAVE & WELCOME MODALS // ============================================================ 
+        function SaveModal({ state, onExport, onImport, onClose }) { const fileRef = useRef(null); return ( <div className="ac-modal-bg" onClick={onClose}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>💾 Save & Load</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 16, lineHeight: 1.6, padding: 12, background: S.bg2, borderRadius: 10, border: `1px solid ${S.border}` }}> <strong style={{ color: S.pink }}>Important:</strong> This game runs locally in your browser. <strong style={{ color: S.lavender }}>Export your save file regularly</strong> to guarantee your progress is never lost. </div> <Card style={{ marginBottom: 12 }}> <div style={{ fontSize: 11, color: S.muted }}>LAST AUTO-SAVE</div> <div style={{ fontSize: 13, marginTop: 4 }}>{new Date(state.lastSave || state.createdAt || Date.now()).toLocaleString()}</div> </Card> <button className="ac-btn ac-btn-primary" style={{ width:'100%', marginBottom: 8 }} onClick={onExport}> ⬇ Download Save File </button> <button className="ac-btn" style={{ width:'100%', marginBottom: 8 }} onClick={() => fileRef.current?.click()}> ⬆ Load Save File </button> <input ref={fileRef} type="file" accept=".json,application/json" style={{ display:'none' }} onChange={e => { if (e.target.files?.[0]) onImport(e.target.files[0]); e.target.value = ''; }} /> <button className="ac-btn" style={{ width:'100%', marginTop: 8 }} onClick={onClose}>Close</button> </div> </div> ); } 
 
-        // ============================================================ // WELCOME BACK MODAL // ============================================================ 
-        function WelcomeBack({ elapsedMs, onClose }) { return ( <div className="ac-modal-bg"> <div className="ac-modal" style={{ textAlign:'center' }}> <div style={{ fontSize: 56 }}>👋</div> <div style={{ fontSize: 22, fontWeight: 700, marginTop: 12 }}>Welcome back!</div> <div style={{ fontSize: 14, color: S.muted, marginTop: 12, lineHeight: 1.7 }}> You were away for <strong style={{ color: S.lavender }}>{fmtTime(elapsedMs)}</strong>. <br/>Your 999 AI competitors have kept studying with real daily rhythms. <br/>Any tournaments that ended in your absence have been resolved. </div> <button className="ac-btn ac-btn-primary" style={{ marginTop: 20, padding: '12px 32px' }} onClick={onClose}> Continue </button> </div> </div> ); } 
+        function WelcomeBack({ elapsedMs, onClose }) { return ( <div className="ac-modal-bg"> <div className="ac-modal" style={{ textAlign:'center' }}> <div style={{ fontSize: 56 }}>👋</div> <div style={{ fontSize: 22, fontWeight: 700, marginTop: 12 }}>Welcome back to Season RISE!</div> <div style={{ fontSize: 14, color: S.muted, marginTop: 12, lineHeight: 1.7 }}> You were away for <strong style={{ color: S.lavender }}>{fmtTime(elapsedMs)}</strong>. <br/>Your 999 competitors have been studying and battling in Ranked. </div> <button className="ac-btn ac-btn-primary" style={{ marginTop: 20, padding: '12px 32px' }} onClick={onClose}> Continue </button> </div> </div> ); } 
 
         // ============================================================ // DASHBOARD // ============================================================ 
-        function Dashboard({ state, catalog, lbXP, lbTP, onNav, onOpenProfile }) { 
+        function Dashboard({ state, catalog, lbXP, lbRP, onNav, onOpenProfile }) { 
             const h = state.human; 
             const profile = getProfile('human', catalog, state);
             const titleIdx = computeTitleIdx(h.xp); 
             const xpRank = lbXP.find(r => r.id === 'human')?.rank || '?'; 
-            const tpRank = lbTP.find(r => r.id === 'human')?.rank || '?'; 
-            const currentTier = lbTP.find(r => r.id === 'human')?.tier || 'LT4'; 
+            const rpRank = lbRP.find(r => r.id === 'human')?.rank || '?'; 
+            const currentTier = lbRP.find(r => r.id === 'human')?.tier || 'LT4'; 
             const nextTitleIdx = Math.min(49, titleIdx + 1); 
             const curTitleXp = TITLE_XP[titleIdx]; 
             const nextTitleXp = TITLE_XP[nextTitleIdx]; 
             const comboMult = comboMultiplier(h.combo); 
             const equippedPet = h.inventory.pets.find(p => p.instanceId === h.equippedPet); 
             const activePot = h.activePotion && h.activePotion.expires > Date.now() ? h.activePotion : null; 
-            const upcoming = Object.values(state.tournaments).filter(t => !t.resolved && t.end > Date.now()).sort((a,b) => a.start - b.start).slice(0, 4); 
             
             return ( 
                 <div className="ac-fade"> 
+                    {/* Season RISE Banner */}
+                    <div style={{ background: 'linear-gradient(90deg, rgba(243,139,168,0.12), rgba(196,181,253,0.12))', border: `1px solid ${S.pink}44`, borderRadius: 12, padding: '10px 16px', marginBottom: 16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 8 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap: 10 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, background: S.pink, color: S.bg, padding: '2px 8px', borderRadius: 6, letterSpacing: '0.5px' }}>SEASON RISE</span>
+                            <span style={{ fontSize: 13, fontStyle: 'italic', color: S.text }}>“The dying realize what they have to do.”</span>
+                        </div>
+                        <span style={{ fontSize: 11, color: S.muted }}>Ranked ELO Active · K=40</span>
+                    </div>
+
                     <Card style={{ background: `linear-gradient(135deg, ${S.panel} 0%, ${S.panel2} 100%)`, border: `1px solid ${S.borderL}`, marginBottom: 16 }}> 
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap: 16 }}> 
                             <div style={{ display:'flex', gap: 16, alignItems:'center' }}> 
@@ -807,15 +851,29 @@
                                     <div style={{ fontSize: 22, fontWeight: 800, color: S.lavender }}>#{xpRank}</div> 
                                 </div> 
                                 <div style={{ textAlign:'right' }}> 
-                                    <div style={{ fontSize: 11, color: S.muted, marginBottom: 2 }}>TP RANK</div> 
-                                    <div style={{ fontSize: 22, fontWeight: 800, color: S.gold }}>#{tpRank}</div> 
+                                    <div style={{ fontSize: 11, color: S.muted, marginBottom: 2 }}>RP RANK</div> 
+                                    <div style={{ fontSize: 22, fontWeight: 800, color: S.gold }}>#{rpRank}</div> 
                                 </div> 
                             </div> 
                         </div> 
                     </Card> 
+
+                    {h.activeMatch && (
+                        <Card style={{ marginBottom: 16, borderColor: S.danger, background: 'rgba(243,139,168,0.06)' }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 10 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: S.danger, fontWeight: 800 }}>⚔️ ACTIVE RANKED BATTLE ({h.activeMatch.modeName.toUpperCase()})</div>
+                                    <div style={{ fontSize: 15, fontWeight: 700, marginTop: 4 }}>vs. {getProfile(h.activeMatch.opponentId, catalog, state).name}</div>
+                                    <div style={{ fontSize: 12, color: S.muted, marginTop: 2 }}>Your XP: <strong style={{ color: S.mint }}>{fmtInt(h.activeMatch.humanXp)}</strong> · Ends in {fmtTime(h.activeMatch.end - Date.now())}</div>
+                                </div>
+                                <button className="ac-btn ac-btn-primary" onClick={() => onNav('ranked')}>View Battle →</button>
+                            </div>
+                        </Card>
+                    )}
+
                     <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: 16 }}> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>LIFETIME XP</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.lavender }}>{fmtInt(h.xp)}</div> <div style={{ marginTop: 8 }}> <ProgressBar value={h.xp - curTitleXp} max={nextTitleXp - curTitleXp} color={TITLE_COLORS[titleIdx].primary} /> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Next: {TITLES[nextTitleIdx]}</div> </div> </Card> 
-                        <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>LIFETIME TP</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.gold }}>{fmtTp(h.tp)}</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 8 }}>Tier: {currentTier}</div> </Card> 
+                        <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>RANKED POINTS (RP)</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.gold }}>{fmtRp(h.rp)}</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 8 }}>Tier: {currentTier} · {h.rankedWins}W / {h.rankedLosses}L</div> </Card> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>COMBO</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.pink }}>{h.combo}×</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>{comboMult.toFixed(2)}× XP · Next in {10 - h.comboProgress}</div> {h.comboExpiry > 0 && <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>Expires: {fmtTime(h.comboExpiry - Date.now())}</div>} </Card> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>STREAK</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.mint }}>{h.streak} <span style={{ fontSize: 13, color: S.muted }}>days</span></div> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Longest: {h.longestStreak}</div> </Card> 
                     </div> 
@@ -823,11 +881,138 @@
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>EQUIPPED PET</div> {equippedPet ? ( <div style={{ display:'flex', alignItems:'center', gap: 12 }}> <div className="ac-float" style={{ fontSize: 40 }}>{equippedPet.emoji}</div> <div> <div style={{ fontWeight: 700, fontSize: 15 }}>{equippedPet.petName}</div> <div style={{ fontSize: 11, marginTop: 2 }}><RarityPill rarity={equippedPet.rarity} /></div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Lv. {equippedPet.level} · +{(equippedPet.val * (1+0.05*(equippedPet.level-1))*100).toFixed(1)}% XP</div> </div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No pet equipped.</div>} </Card> 
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>ACTIVE POTION</div> {activePot ? ( <div> <div style={{ fontSize: 14, fontWeight: 700 }}>{POTIONS[activePot.type].emoji} {POTIONS[activePot.type].name}</div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Expires in {fmtTime(activePot.expires - Date.now())}</div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No active potion.</div>} </Card> 
                     </div> 
-                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('othertasks')}>🧹 Other Tasks</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>🏆 Tournaments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
-                    <Section title="Upcoming Tournaments" right={<button className="ac-btn" onClick={() => onNav('tournaments')}>See all →</button>}> {upcoming.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No upcoming tournaments.</div> : ( <div className="ac-col"> {upcoming.map(t => { const isLive = Date.now() >= t.start && Date.now() <= t.end; const joined = !!h.tournamentJoins[t.id]; return ( <Card key={t.id} style={{ padding: 14 }}> <div className="ac-row" style={{ justifyContent:'space-between', flexWrap:'wrap', gap: 8 }}> <div> <div className="ac-row" style={{ gap: 8 }}> <span style={{ fontSize: 11, padding:'2px 8px', borderRadius: 6, background: t.type==='daily'?S.blue+'22':t.type==='major'?S.lavender+'22':t.type==='weekly'?S.pink+'22':S.gold+'22', color: t.type==='daily'?S.blue:t.type==='major'?S.lavender:t.type==='weekly'?S.pink:S.gold, fontWeight: 700, textTransform:'uppercase' }}>{t.type}</span> <span style={{ fontWeight: 700 }}>{t.name}</span> </div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>{isLive ? '🔴 LIVE NOW' : `Starts ${fmtTime12(t.start)}`} · {t.baseTP} TP base</div> </div> {joined ? <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>✓ Joined</span> : isLive && !t.resolved ? <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>Join</button> : null} </div> </Card> ); })} </div> )} </Section> 
+                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('ranked')}>⚔️ Ranked Battle</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('othertasks')}>🧹 Other Tasks</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
                 </div> 
             ); 
         } 
+
+        // ============================================================ // RANKED BATTLE TAB // ============================================================ 
+        function RankedTab({ state, catalog, lbRP, onStartMatch, toast, onOpenProfile }) {
+            const h = state.human;
+            const now = Date.now();
+            const m = h.activeMatch;
+            const myRank = lbRP.find(r => r.id === 'human')?.rank || '?';
+
+            const handleStart = (mode) => {
+                if (onStartMatch(mode)) {
+                    toast(`⚔️ Started ${mode.name} (${mode.hours}h) Ranked Battle!`);
+                } else {
+                    toast('Already in an active Ranked Battle.');
+                }
+            };
+
+            let activeOpponent = null;
+            let oppRp = 1000;
+            let oppRank = '?';
+            let expectedWinRp = 20;
+            let expectedLossRp = 20;
+            let currentOppXp = 0;
+
+            if (m) {
+                activeOpponent = getProfile(m.opponentId, catalog, state);
+                oppRp = state.ai[m.opponentId]?.rp || 1000;
+                oppRank = lbRP.find(r => r.id === m.opponentId)?.rank || '?';
+                const repeats = h.opponentHistory[m.opponentId] || 0;
+                expectedWinRp = calcEloTransfer(h.rp, oppRp, repeats);
+                expectedLossRp = calcEloTransfer(oppRp, h.rp, 0);
+                const frac = clamp((now - m.start) / (m.end - m.start), 0, 1);
+                currentOppXp = Math.floor(m.targetOppXp * frac);
+            }
+
+            return (
+                <div className="ac-fade">
+                    <Section title="Ranked Arena — Season RISE" sub="ELO-based 1v1 duels · K = 40 · Outscore your opponent in XP before time expires">
+                        <Card style={{ marginBottom: 16 }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: S.muted }}>YOUR COMPETITIVE RATING</div>
+                                    <div style={{ fontSize: 28, fontWeight: 800, color: S.gold }}>{fmtRp(h.rp)} RP <span style={{ fontSize: 14, color: S.muted }}>(Rank #{myRank})</span></div>
+                                </div>
+                                <div style={{ display:'flex', gap: 16, fontSize: 13 }}>
+                                    <div><span style={{ color: S.mint, fontWeight: 700 }}>{h.rankedWins}</span> Wins</div>
+                                    <div><span style={{ color: S.danger, fontWeight: 700 }}>{h.rankedLosses}</span> Losses</div>
+                                    <div><span style={{ color: S.muted, fontWeight: 700 }}>{h.rankedDraws}</span> Draws</div>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {m ? (
+                            <Card style={{ marginBottom: 20, borderColor: S.lavender, background: `linear-gradient(135deg, ${S.panel}, ${S.panel2})` }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 12, flexWrap:'wrap', gap: 8 }}>
+                                    <span className="ac-pill ac-live" style={{ background: S.danger+'22', color: S.danger }}>🔴 LIVE BATTLE · {m.modeName.toUpperCase()} ({m.hours} HR)</span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: S.gold }}>⏱ {fmtTime(m.end - now)} remaining</span>
+                                </div>
+
+                                <div className="ac-grid" style={{ gridTemplateColumns:'1fr auto 1fr', alignItems:'center', gap: 12, margin: '16px 0' }}>
+                                    <div style={{ textAlign:'center', padding: 12, background: S.bg2, borderRadius: 12, border: `1px solid ${m.humanXp >= currentOppXp ? S.mint : S.border}` }}>
+                                        <div style={{ fontSize: 32 }}>🦊</div>
+                                        <div style={{ fontWeight: 700, fontSize: 14, marginTop: 4 }}>{h.name} <YouBadge small /></div>
+                                        <div style={{ fontSize: 11, color: S.gold }}>{fmtRp(h.rp)} RP (#{myRank})</div>
+                                        <div style={{ fontSize: 22, fontWeight: 800, color: S.lavender, marginTop: 8 }}>{fmtInt(m.humanXp)} XP</div>
+                                    </div>
+
+                                    <div style={{ fontSize: 20, fontWeight: 900, color: S.muted }}>VS</div>
+
+                                    <div style={{ textAlign:'center', padding: 12, background: S.bg2, borderRadius: 12, border: `1px solid ${currentOppXp > m.humanXp ? S.danger : S.border}` }}>
+                                        <div style={{ fontSize: 32 }}>{activeOpponent.avatar || '🦉'}</div>
+                                        <div style={{ fontWeight: 700, fontSize: 14, marginTop: 4, cursor:'pointer' }} onClick={() => onOpenProfile(m.opponentId)}>{activeOpponent.name}</div>
+                                        <div style={{ fontSize: 11, color: S.gold }}>{fmtRp(oppRp)} RP (#{oppRank})</div>
+                                        <div style={{ fontSize: 22, fontWeight: 800, color: S.pink, marginTop: 8 }}>{fmtInt(currentOppXp)} XP</div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display:'flex', justifyContent:'space-between', fontSize: 12, color: S.muted, padding: '8px 12px', background: S.bg2, borderRadius: 8 }}>
+                                    <span>Victory Stake: <strong style={{ color: S.mint }}>+{expectedWinRp} RP</strong></span>
+                                    <span>Draw: <strong>0 RP</strong></span>
+                                    <span>Defeat Stake: <strong style={{ color: S.danger }}>-{Math.min(expectedLossRp, h.rp)} RP</strong></span>
+                                </div>
+                            </Card>
+                        ) : (
+                            <Section title="Select Battle Duration" sub="Closest-RP matchmaking · All modes use ×1.0 ELO multiplier">
+                                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 20 }}>
+                                    {RANKED_MODES.map(mode => (
+                                        <Card key={mode.id}>
+                                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 8 }}>
+                                                <span style={{ fontSize: 28 }}>{mode.icon}</span>
+                                                <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{mode.hours} HR · ×1.0</span>
+                                            </div>
+                                            <div style={{ fontWeight: 700, fontSize: 16 }}>{mode.name}</div>
+                                            <div style={{ fontSize: 12, color: S.muted, marginTop: 2, marginBottom: 14 }}>{mode.desc}</div>
+                                            <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={() => handleStart(mode)}>Start Ranked Battle</button>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </Section>
+                        )}
+
+                        <Section title="Recent Match History">
+                            {state.recentMatches.length === 0 ? (
+                                <Card><div style={{ color: S.muted, fontSize: 13 }}>No completed ranked battles yet.</div></Card>
+                            ) : (
+                                <div className="ac-col">
+                                    {state.recentMatches.slice(0, 15).map((rm, i) => (
+                                        <Card key={i} style={{ padding: 12 }}>
+                                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 8 }}>
+                                                <div>
+                                                    <span className="ac-pill" style={{ background: rm.outcome==='win'?S.mint+'22':rm.outcome==='loss'?S.danger+'22':S.muted+'22', color: rm.outcome==='win'?S.mint:rm.outcome==='loss'?S.danger:S.muted, marginRight: 8 }}>
+                                                        {rm.outcome.toUpperCase()}
+                                                    </span>
+                                                    <strong style={{ fontSize: 13 }}>{rm.mode} ({rm.hours}h) vs. {rm.oppName}</strong>
+                                                    <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Score: {fmtInt(rm.myXp)} XP vs {fmtInt(rm.oppXp)} XP · {new Date(rm.ts).toLocaleString()}</div>
+                                                </div>
+                                                <div style={{ fontSize: 15, fontWeight: 800, color: rm.rpDelta > 0 ? S.mint : rm.rpDelta < 0 ? S.danger : S.muted }}>
+                                                    {rm.rpDelta > 0 ? `+${rm.rpDelta}` : rm.rpDelta} RP
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
+                        </Section>
+                    </Section>
+                </div>
+            );
+        }
 
         // ============================================================ // ASSIGNMENTS, STUDYING, OTHER TASKS, MOCK TESTS // ============================================================ 
         function AssignmentsTab({ state, onComplete, toast }) { const [activeTask, setActiveTask] = useState(null); const h = state.human; const confirm = () => { if (!activeTask) return; const xp = onComplete('assignment', activeTask.id, activeTask.xp); toast(`+${xp} XP · ${activeTask.name}`); setActiveTask(null); }; return ( <div className="ac-fade"> <Section title="Assignments" sub="Complete academic tasks to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}> {ASSIGNMENT_TASKS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>{t.icon}</div> <span className="ac-pill" style={{ background: S.lavender+'22', color: S.lavender }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActiveTask(t)}>Complete</button> </Card> ))} </div> </Section> {activeTask && ( <div className="ac-modal-bg" onClick={() => setActiveTask(null)}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ textAlign:'center', marginBottom: 20 }}> <div style={{ fontSize: 48, marginBottom: 12 }}>{activeTask.icon}</div> <div style={{ fontSize: 20, fontWeight: 700 }}>{activeTask.name}</div> <div style={{ fontSize: 13, color: S.muted, marginTop: 4 }}>{activeTask.desc}</div> </div> <div style={{ fontSize: 13, color: S.muted, textAlign:'center', marginBottom: 20 }}> Confirm you have completed this task. Reward: <strong style={{ color: S.lavender }}>+{calcTaskXp(activeTask.xp, h, 'assignment')} XP</strong> </div> <div style={{ display:'flex', gap: 10 }}> <button className="ac-btn" style={{ flex: 1 }} onClick={() => setActiveTask(null)}>Cancel</button> <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} onClick={confirm}>Confirm</button> </div> </div> </div> )} </div> ); } 
@@ -882,119 +1067,6 @@
 
         function MockTestsTab({ state, onComplete, toast }) { const h = state.human; const [active, setActive] = useState(null); const [questions, setQuestions] = useState([]); const [answers, setAnswers] = useState({}); const [submitted, setSubmitted] = useState(false); const [score, setScore] = useState(null); const start = (test) => { const rng = mulberry32(Math.floor(Math.random()*1e9)); setQuestions(shuffle(MOCK_BANK, rng).slice(0, test.questions)); setAnswers({}); setSubmitted(false); setScore(null); setActive(test); }; const submit = () => { let correct = 0; questions.forEach((q, i) => { if (answers[i] === q.a) correct += 1; }); const pct = correct / questions.length; setScore({ correct, total: questions.length, pct }); setSubmitted(true); if (pct > 0.8) { const xp = onComplete('mock', active.id, active.xp, { score: pct }); toast(`+${xp} XP · Mock Test passed (${Math.round(pct*100)}%)`); } else toast(`Score ${Math.round(pct*100)}% — need >80%.`); }; return ( <div className="ac-fade"> <Section title="Mock Tests" sub="Score strictly above 80% to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))' }}> {MOCK_TESTS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>📝</div> <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin Test</button> </Card> ))} </div> </Section> {active && ( <div className="ac-modal-bg"> <div className="ac-modal"> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 12 }}> <div style={{ fontSize: 18, fontWeight: 700 }}>{active.name}</div> {!submitted && <button className="ac-btn" onClick={() => setActive(null)}>Exit</button>} </div> {!submitted ? ( <div> {questions.map((q, i) => ( <div key={i} style={{ marginBottom: 18 }}> <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{i+1}. {q.q}</div> <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr' }}> {q.opts.map((opt, oi) => ( <button key={oi} className="ac-btn" style={{ textAlign:'left', padding:'8px 10px', fontSize: 12, background: answers[i]===oi?S.lavender+'22':S.panel2, borderColor: answers[i]===oi?S.lavender:S.border }} onClick={() => setAnswers({...answers, [i]: oi})}> {String.fromCharCode(65+oi)}. {opt} </button> ))} </div> </div> ))} <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={submit}> Submit ({Object.keys(answers).length}/{questions.length}) </button> </div> ) : ( <div style={{ textAlign:'center', padding: 16 }}> <div style={{ fontSize: 36, marginBottom: 12 }}>{score.pct > 0.8 ? '🏆' : '📖'}</div> <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{score.correct}/{score.total} ({Math.round(score.pct*100)}%)</div> <div style={{ fontSize: 14, color: score.pct > 0.8 ? S.success : S.danger, fontWeight: 600, marginBottom: 16 }}> {score.pct > 0.8 ? `Passed! +${calcTaskXp(active.xp, h, 'mock')} XP` : 'Failed — need >80%.'} </div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActive(null)}>Close</button> </div> )} </div> </div> )} </div> ); } 
 
-        // ============================================================ // TOURNAMENTS // ============================================================ 
-        function TournamentBoard({ t, state, catalog, onClose, onOpenProfile }) {
-          const [q, setQ] = useState(''), [page, setPage] = useState(0);
-          const h = state.human, now = Date.now(), live = !t.resolved && now <= t.end;
-          let rows;
-          if (live) {
-            const f = clamp((now - t.start) / (t.end - t.start), 0, 1);
-            const e = computeAIParticipants(t, catalog, state).map(a => ({ pid: a.pid, xp: Math.floor(a.xp * f) }));
-            if (h.tournamentJoins[t.id]) e.push({ pid: 'human', xp: h.tournamentProgress[t.id] || 0 });
-            e.sort((a, b) => b.xp - a.xp || a.pid.localeCompare(b.pid));
-            rows = e.map((r, i) => ({ ...r, rank: i + 1, tp: tpReward(t.baseTP, e.length, i + 1) }));
-          } else rows = computeRanking(t, catalog, h.tournamentProgress, state);
-          const s = q.trim().toLowerCase();
-          const list = s ? rows.filter(r => getProfile(r.pid, catalog, state).name.toLowerCase().includes(s)) : rows;
-          const pages = Math.max(1, Math.ceil(list.length / 50)), pg = Math.min(page, pages - 1);
-          const me = rows.find(r => r.pid === 'human');
-          return (
-            <div className="ac-modal-bg" onClick={onClose}>
-              <div className="ac-modal" style={{ maxWidth: 680 }} onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><div style={{ fontSize: 18, fontWeight: 700 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: S.muted }}>{rows.length} players · {live ? 'live, projected TP' : 'final'}</div></div>
-                  <button className="ac-btn" onClick={onClose}>✕</button>
-                </div>
-                <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-                  <input className="ac-input" placeholder="Search player…" value={q} onChange={e => { setQ(e.target.value); setPage(0); }} />
-                  {me && <button className="ac-btn" onClick={() => { setQ(''); setPage(Math.floor((me.rank - 1) / 50)); }}>Me</button>}
-                </div>
-                {list.slice(pg * 50, pg * 50 + 50).map(r => { const p = getProfile(r.pid, catalog, state), you = r.pid === 'human'; return (
-                  <div key={r.pid} style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto auto', gap: 10, padding: '7px 4px', fontSize: 12, borderBottom: `1px solid ${S.border}`, color: you ? S.mint : S.text, alignItems:'center' }}>
-                    <span style={{ color: S.muted }}>#{r.rank}</span>
-                    <span style={{ cursor:'pointer', fontWeight: 600 }} onClick={() => onOpenProfile(r.pid)}>{p.name} {p.vip && <VIPBadge small />} {you && <YouBadge small />}</span>
-                    <span style={{ color: S.lavender }}>{fmtInt(r.xp)} XP</span>
-                    <span style={{ minWidth: 52, textAlign: 'right', color: r.tp > 0 ? S.gold : r.tp < 0 ? S.danger : S.muted }}>{fmtSigned(r.tp)}</span>
-                  </div>); })}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                  <button className="ac-btn" disabled={pg === 0} onClick={() => setPage(pg - 1)}>←</button>
-                  <span style={{ fontSize: 12, color: S.muted }}>Page {pg + 1} / {pages}</span>
-                  <button className="ac-btn" disabled={pg >= pages - 1} onClick={() => setPage(pg + 1)}>→</button>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        function TournamentsTab({ state, catalog, onJoin, toast, onOpenProfile }) { 
-            const h = state.human; const [filter, setFilter] = useState('all'); const [view, setView] = useState(null); const now = Date.now(); 
-            const all = Object.values(state.tournaments).sort((a,b) => a.start - b.start); 
-            const upcoming = all.filter(t => !t.resolved && t.start > now); 
-            const live = all.filter(t => !t.resolved && t.start <= now && t.end >= now); 
-            const past = all.filter(t => t.resolved || t.end < now).sort((a,b) => b.end - a.end); 
-            const filtered = filter === 'live' ? live : filter === 'upcoming' ? upcoming : filter === 'past' ? past : [...live, ...upcoming]; 
-            const handleJoin = (t) => { if (onJoin(t.id)) toast(`Joined ${t.name}!`); else toast('Cannot join.'); }; 
-            
-            const renderTournament = (t) => { 
-                const isLive = now >= t.start && now <= t.end; 
-                const isPast = t.resolved || t.end < now; 
-                const joined = !!h.tournamentJoins[t.id]; 
-                const humanProgress = h.tournamentProgress[t.id] || 0; 
-                let liveBoard = null; 
-                if (isLive && !t.resolved) { 
-                    const ais = computeAIParticipants(t, catalog, state); 
-                    const elapsedFrac = clamp((now - t.start) / (t.end - t.start), 0, 1); 
-                    const entries = ais.map(a => ({ pid: a.pid, xp: Math.floor(a.xp * elapsedFrac) })); 
-                    if (joined) entries.push({ pid: 'human', xp: humanProgress }); 
-                    entries.sort((a,b) => b.xp - a.xp || a.pid.localeCompare(b.pid)); 
-                    liveBoard = entries.slice(0, 10); 
-                } 
-                return ( 
-                    <Card key={t.id} style={{ marginBottom: 10 }}> 
-                        <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap: 12, marginBottom: 10 }}> 
-                            <div> 
-                                <div style={{ display:'flex', gap: 8, alignItems:'center', flexWrap:'wrap' }}> 
-                                    <span style={{ fontSize: 10, padding:'2px 8px', borderRadius: 6, background: t.type==='daily'?S.blue+'22':t.type==='major'?S.lavender+'22':t.type==='weekly'?S.pink+'22':S.gold+'22', color: t.type==='daily'?S.blue:t.type==='major'?S.lavender:t.type==='weekly'?S.pink:S.gold, fontWeight: 800, textTransform:'uppercase' }}>{t.type}</span> 
-                                    <span style={{ fontWeight: 700, fontSize: 15 }}>{t.name}</span> 
-                                    {isLive && <span className="ac-pill ac-live" style={{ background: S.danger+'22', color: S.danger }}>🔴 LIVE</span>} 
-                                    {isPast && <span className="ac-pill" style={{ background: S.muted+'22', color: S.muted }}>ENDED</span>} 
-                                    {joined && !isPast && <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>✓ JOINED</span>} 
-                                </div> 
-                                <div style={{ fontSize: 11, color: S.muted, marginTop: 6 }}> {isPast ? `Ended ${fmtTime12(t.end)}` : `${fmtTime12(t.start)} – ${fmtTime12(t.end)}`} · Base: {t.baseTP} TP </div> 
-                                {isLive && <div style={{ fontSize: 11, color: S.gold, marginTop: 4 }}>⏱ {fmtTime(t.end - now)} remaining</div>} 
-                            </div> 
-                            <div> 
-                                {!isPast && !joined && <button className="ac-btn ac-btn-primary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => handleJoin(t)}>Join</button>} 
-                                {isPast && t.winner && <div style={{ fontSize: 11, color: S.gold, cursor:'pointer' }} onClick={() => onOpenProfile(t.winner)}>🏆 {getProfile(t.winner, catalog, state).name}</div>} 
-                            </div> 
-                        </div> 
-                        {isLive && liveBoard && ( 
-                            <div style={{ marginTop: 12, padding: 12, background: S.bg2, borderRadius: 10 }}> 
-                                <div style={{ fontSize: 11, color: S.muted, marginBottom: 8, fontWeight: 600 }}>LIVE LEADERBOARD <button className="ac-btn" style={{ float: 'right', padding: '3px 10px', fontSize: 11 }} onClick={() => setView(t)}>View all</button></div> 
-                                {liveBoard.map((e, i) => { const p = getProfile(e.pid, catalog, state); return ( <div key={e.pid} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', fontSize: 12, color: e.pid==='human'?S.mint:S.text }}> <span style={{ cursor:'pointer' }} onClick={() => onOpenProfile(e.pid)}>#{i+1} {p.name}{p.vip && <span style={{ marginLeft: 6 }}><VIPBadge small /></span>}{e.pid==='human' && <span style={{ marginLeft: 6 }}><YouBadge small /></span>}</span> <span style={{ color: S.lavender, fontWeight: 600 }}>{fmtInt(e.xp)} XP</span> </div> ); })} 
-                            </div> 
-                        )} 
-                        {isPast && t.results && t.results.length > 0 && ( 
-                            <div style={{ marginTop: 12, padding: 12, background: S.bg2, borderRadius: 10 }}> 
-                                <div style={{ fontSize: 11, color: S.muted, marginBottom: 8, fontWeight: 600 }}>TOP PLACEMENTS <button className="ac-btn" style={{ float: 'right', padding: '3px 10px', fontSize: 11 }} onClick={() => setView(t)}>View all</button></div> 
-                                {t.results.slice(0, 5).map((r, i) => { const p = getProfile(r.pid, catalog, state); return ( <div key={r.pid} style={{ display:'flex', justifyContent:'space-between', padding:'3px 0', fontSize: 12 }}> <span style={{ cursor:'pointer' }} onClick={() => onOpenProfile(r.pid)}>#{i+1} {p.name}{p.vip && <span style={{ marginLeft: 6 }}><VIPBadge small /></span>}{r.pid==='human' && <span style={{ marginLeft: 6 }}><YouBadge small /></span>}</span> <span><span style={{ color: S.lavender }}>{fmtInt(r.xp)} XP</span> · <span style={{ color: r.tp > 0 ? S.gold : r.tp < 0 ? S.danger : S.muted }}>{fmtSigned(r.tp)} TP</span></span> </div> ); })} 
-                            </div> 
-                        )} 
-                    </Card> 
-                ); 
-            }; 
-
-            return ( 
-                <div className="ac-fade"> 
-                    {view && <TournamentBoard t={view} state={state} catalog={catalog} onClose={() => setView(null)} onOpenProfile={onOpenProfile} />} 
-                    <Section title="Tournaments" sub="Compete for Tournament Points" right={ <div className="ac-row" style={{ gap: 6 }}> {['all','live','upcoming','past'].map(f => ( <button key={f} className={`ac-tab ${filter===f?'active':''}`} onClick={() => setFilter(f)} style={{ padding:'6px 12px', fontSize: 12 }}>{f.charAt(0).toUpperCase()+f.slice(1)}</button> ))} </div> }> 
-                        <div className="ac-col"> {filtered.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No tournaments here.</div></Card> : filtered.map(renderTournament)} </div> 
-                    </Section> 
-                </div> 
-            ); 
-        } 
-
         // ============================================================ // QUESTS // ============================================================ 
         const DAILY_QUESTS = [ { id:'daily_assign5', name:'Assignment Sweep', desc:'Complete 5 assignments', target:5, key:'assignments', reward:{ xp: 100 } }, { id:'daily_pages3', name:'Memory Recall', desc:'Recall 3 pages', target:3, key:'pages', reward:{ xp: 80 } }, { id:'daily_problems2', name:'Number Crunch', desc:'Solve 2 numerical problems', target:2, key:'problems', reward:{ xp: 60 } }, { id:'daily_combo5', name:'Combo Momentum', desc:'Reach a combo of 5 today', target:1, key:'comboFive', reward:{ xp: 120 } }, { id:'daily_tasks10', name:'Busy Scholar', desc:'Complete 10 tasks today', target:10, key:'tasks', reward:{ xp: 150, egg: 1, potion: 'double_xp' } } ]; 
         const WEEKLY_QUESTS = [ { id:'weekly_tasks50', name:'Weekly Marathon', desc:'Complete 50 tasks this week', target:50, key:'tasks', reward:{ xp: 800 } }, { id:'weekly_xp2000', name:'XP Accumulator', desc:'Earn 2000 XP this week', target:2000, key:'xp', reward:{ xp: 500, egg: 1, potion: 'golden_study' } }, { id:'weekly_mocks3', name:'Test Taker', desc:'Complete 3 mock tests', target:3, key:'mockTests', reward:{ xp: 600 } } ]; 
@@ -1034,9 +1106,9 @@
         } 
 
         // ============================================================ // LEADERBOARD // ============================================================ 
-        function LeaderboardTab({ state, catalog, lbXP, lbTP, onOpenProfile }) { 
-            const [mode, setMode] = useState('xp'); const [search, setSearch] = useState(''); const [natFilter, setNatFilter] = useState('all'); const [vipFilter, setVipFilter] = useState(false); const [page, setPage] = useState(0); 
-            const pageSize = 50; const lb = mode === 'xp' ? lbXP : lbTP; 
+        function LeaderboardTab({ state, catalog, lbXP, lbRP, onOpenProfile }) { 
+            const [mode, setMode] = useState('rp'); const [search, setSearch] = useState(''); const [natFilter, setNatFilter] = useState('all'); const [vipFilter, setVipFilter] = useState(false); const [page, setPage] = useState(0); 
+            const pageSize = 50; const lb = mode === 'xp' ? lbXP : lbRP; 
             const filtered = useMemo(() => { 
                 let rows = lb; 
                 if (search.trim()) { 
@@ -1053,10 +1125,10 @@
             
             return ( 
                 <div className="ac-fade"> 
-                    <Section title="Leaderboards" sub="All 1000 competitors"> 
+                    <Section title="Leaderboards — Season RISE" sub="Live standings across all 1,000 scholars"> 
                         <div style={{ display:'flex', gap: 8, marginBottom: 14 }}> 
-                            <button className={`ac-tab ${mode==='xp'?'active':''}`} onClick={() => { setMode('xp'); setPage(0); }}>📈 Experience</button> 
-                            <button className={`ac-tab ${mode==='tp'?'active':''}`} onClick={() => { setMode('tp'); setPage(0); }}>🏆 Efficiency</button> 
+                            <button className={`ac-tab ${mode==='rp'?'active':''}`} onClick={() => { setMode('rp'); setPage(0); }}>⚔️ Ranked Points (RP)</button> 
+                            <button className={`ac-tab ${mode==='xp'?'active':''}`} onClick={() => { setMode('xp'); setPage(0); }}>📈 Experience (XP)</button> 
                         </div> 
                         <div style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap: 8, marginBottom: 14 }}> 
                             <input className="ac-input" placeholder="Search name or username..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} /> 
@@ -1066,7 +1138,7 @@
                             </select> 
                             <button className={`ac-btn ${vipFilter?'ac-btn-primary':''}`} onClick={() => { setVipFilter(!vipFilter); setPage(0); }}>VIP</button> 
                         </div> 
-                        {humanRank && <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>Your {mode === 'xp' ? 'XP' : 'TP'} rank: <strong style={{ color: mode==='xp'?S.lavender:S.gold }}>#{humanRank}</strong> of 1000</div>} 
+                        {humanRank && <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>Your {mode === 'xp' ? 'XP' : 'RP'} rank: <strong style={{ color: mode==='xp'?S.lavender:S.gold }}>#{humanRank}</strong> of 1,000</div>} 
                         <Card style={{ padding: 0, overflow:'hidden' }}> 
                             <div style={{ maxHeight: 600, overflowY:'auto' }}> 
                                 {visible.length === 0 ? <div style={{ padding: 24, textAlign:'center', color: S.muted }}>No results.</div> : visible.map(r => { 
@@ -1083,7 +1155,7 @@
                                                 <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>@{r.username} · {r.nationality}</div> 
                                             </div> 
                                             <div style={{ fontSize: 11, color: mode==='xp'?S.lavender:S.gold, fontWeight: 700, textAlign:'right' }}> {mode === 'xp' ? r.title : r.tier} </div> 
-                                            <div style={{ fontSize: 13, fontWeight: 700, textAlign:'right', color: mode==='xp'?S.lavender:S.gold }}> {mode === 'xp' ? fmtShort(r.xp) : fmtTp(r.tp)} </div> 
+                                            <div style={{ fontSize: 13, fontWeight: 700, textAlign:'right', color: mode==='xp'?S.lavender:S.gold }}> {mode === 'xp' ? fmtShort(r.xp) : `${fmtRp(r.rp)} RP`} </div> 
                                         </div> 
                                     ); 
                                 })} 
@@ -1100,13 +1172,13 @@
         } 
 
         // ============================================================ // TITLES & TIERS TAB // ============================================================ 
-        function TitlesTab({ state, lbTP }) { 
+        function TitlesTab({ state, lbRP }) { 
             const h = state.human, [sub, setSub] = useState('titles'); 
-            const ti = computeTitleIdx(h.xp), cur = lbTP.find(r => r.id === 'human')?.tier || 'LT4', best = TIER_ORDER.indexOf(h.highestTier); 
+            const ti = computeTitleIdx(h.xp), cur = lbRP.find(r => r.id === 'human')?.tier || 'LT4', best = TIER_ORDER.indexOf(h.highestTier); 
             const rwText = rw => { const c = {}; (rw.potions || []).forEach(p => c[p] = (c[p] || 0) + 1); const out = []; if (rw.eggs) out.push('🥚 ' + rw.eggs + (rw.eggs > 1 ? ' eggs' : ' egg')); Object.entries(c).forEach(([k, v]) => out.push(v + '× ' + POTIONS[k].emoji + ' ' + POTIONS[k].name)); return out.join(' · ') || 'No reward (starting tier)'; }; 
             return ( 
                 <div className="ac-fade"> 
-                    <Section title="Titles & Tiers" sub="Titles come from lifetime XP, tiers from your TP rank. Rewards are granted the first time you reach each one."> 
+                    <Section title="Titles & Tiers" sub="Titles come from lifetime XP, tiers from your RP rank. Rewards are granted the first time you reach each one."> 
                         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}> 
                             {[['titles', '⭐ Titles (50)'], ['tiers', '🏅 Tiers (8)']].map(([k, l]) => <button key={k} className={`ac-tab ${sub === k ? 'active' : ''}`} onClick={() => setSub(k)}>{l}</button>)} 
                         </div> 
@@ -1125,7 +1197,7 @@
                                 {TIER_ORDER.slice().reverse().map(tn => { const o = TIER_ORDER.indexOf(tn), c = TIER_INFO[tn].color; return ( 
                                     <Card key={tn} style={{ borderColor: tn === cur ? c : S.border }}> 
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}> 
-                                            <div><span className="ac-pill" style={{ background: c + '22', color: c }}>{tn}</span><span style={{ fontSize: 12, color: S.muted, marginLeft: 8 }}>TP rank {TIER_RANGES[tn]}</span></div> 
+                                            <div><span className="ac-pill" style={{ background: c + '22', color: c }}>{tn}</span><span style={{ fontSize: 12, color: S.muted, marginLeft: 8 }}>RP rank {TIER_RANGES[tn]}</span></div> 
                                             <span style={{ fontSize: 11, color: o <= best ? S.mint : S.muted }}>{tn === cur ? 'Current' : o <= best ? '✓ Earned' : 'Locked'}</span> 
                                         </div> 
                                         <div style={{ fontSize: 12, marginTop: 8 }}>{rwText(TIER_REWARDS[tn])}</div> 
@@ -1246,7 +1318,7 @@
                                 <div>🥚 <strong>{h.inventory.eggs}</strong> Eggs</div> 
                                 <div>🐾 <strong>{h.inventory.pets.length}</strong> Pets</div> 
                                 <div>🧪 <strong>{h.inventory.potions.reduce((s,p)=>s+p.quantity,0)}</strong> Potions</div> 
-                                <div>🏆 <strong>{fmtTp(h.tp)}</strong> TP Available</div> 
+                                <div>⚔️ <strong>{fmtRp(h.rp)}</strong> RP Available</div> 
                             </div> 
                         </Card> 
                         {activePot && ( 
@@ -1257,7 +1329,7 @@
                             </Card> 
                         )} 
                         <Section title="Owned Potions"> 
-                            {h.inventory.potions.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No potions in inventory. Craft or purchase them below.</div></Card> : ( 
+                            {h.inventory.potions.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No potions in inventory. Acquire them below.</div></Card> : ( 
                                 <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))' }}> 
                                     {h.inventory.potions.map((inv, i) => { const def = POTIONS[inv.type]; return ( 
                                         <Card key={i}> 
@@ -1271,7 +1343,7 @@
                                 </div> 
                             )} 
                         </Section> 
-                        <Section title="Potion Market" sub="Spend Tournament Points (TP) to acquire advanced elixirs"> 
+                        <Section title="Potion Market" sub="Spend Ranked Points (RP) to acquire advanced elixirs"> 
                             <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))' }}> 
                                 {Object.entries(POTIONS).map(([type, def]) => ( 
                                     <Card key={type}> 
@@ -1279,8 +1351,8 @@
                                         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{def.name}</div> 
                                         <div style={{ fontSize: 12, color: S.muted, marginBottom: 12, minHeight: 36 }}>{def.desc}</div> 
                                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}> 
-                                            <span style={{ color: S.gold, fontWeight: 700 }}>{def.cost} TP</span> 
-                                            <button className="ac-btn ac-btn-primary" style={{ padding:'6px 14px', fontSize: 12 }} disabled={h.tp < def.cost} onClick={() => { onBuyPotion(type); toast(`Purchased ${def.name}!`); }}>Purchase</button> 
+                                            <span style={{ color: S.gold, fontWeight: 700 }}>{def.cost} RP</span> 
+                                            <button className="ac-btn ac-btn-primary" style={{ padding:'6px 14px', fontSize: 12 }} disabled={h.rp < def.cost} onClick={() => { onBuyPotion(type); toast(`Purchased ${def.name}!`); }}>Purchase</button> 
                                         </div> 
                                     </Card> 
                                 ))} 
@@ -1292,7 +1364,7 @@
         } 
 
         // ============================================================ // UNIVERSAL PROFILE MODAL // ============================================================ 
-        function ProfileModal({ playerId, state, catalog, lbXP, lbTP, onClose, onSaveProfile }) { 
+        function ProfileModal({ playerId, state, catalog, lbXP, lbRP, onClose, onSaveProfile }) { 
             const isHuman = playerId === 'human'; 
             const baseProfile = getProfile(playerId, catalog, state); 
             const [name, setName] = useState(baseProfile.name); 
@@ -1300,19 +1372,18 @@
             const [bio, setBio] = useState(baseProfile.bio || ''); 
             const [motto, setMotto] = useState(baseProfile.motto || ''); 
             const [avatar, setAvatar] = useState(baseProfile.avatar || '🦊'); 
-            const [favSubject, setFavSubject] = useState(baseProfile.favSubject || 'Mathematics'); 
             
             const xp = isHuman ? state.human.xp : (state.ai[playerId]?.xp || 0); 
-            const tp = isHuman ? state.human.tp : (state.ai[playerId]?.tp || 0); 
+            const rp = isHuman ? state.human.rp : (state.ai[playerId]?.rp || 0); 
             const titleIdx = computeTitleIdx(xp); 
             
             const xpRank = lbXP.find(r => r.id === playerId)?.rank || '?'; 
-            const tpRank = lbTP.find(r => r.id === playerId)?.rank || '?'; 
-            const tier = computeTierForRank(tpRank); 
+            const rpRank = lbRP.find(r => r.id === playerId)?.rank || '?'; 
+            const tier = computeTierForRank(rpRank); 
 
             const save = () => {
                 if (!name.trim() || !username.trim()) return;
-                onSaveProfile({ name: name.trim(), username: username.trim(), bio: bio.trim(), motto: motto.trim(), avatar, favSubject });
+                onSaveProfile({ name: name.trim(), username: username.trim(), bio: bio.trim(), motto: motto.trim(), avatar });
                 onClose();
             };
 
@@ -1347,7 +1418,7 @@
                         </div> 
                         <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr', marginBottom: 16 }}> 
                             <Card><div style={{ fontSize: 11, color: S.muted }}>XP & RANK</div><div style={{ fontSize: 16, fontWeight: 700, color: S.lavender }}>{fmtInt(xp)} <span style={{ fontSize: 12, color: S.muted }}>(#{xpRank})</span></div><div style={{ fontSize: 11, color: S.gold, marginTop: 2 }}>{TITLES[titleIdx]}</div></Card> 
-                            <Card><div style={{ fontSize: 11, color: S.muted }}>TP & RANK</div><div style={{ fontSize: 16, fontWeight: 700, color: S.gold }}>{fmtTp(tp)} <span style={{ fontSize: 12, color: S.muted }}>(#{tpRank})</span></div><div style={{ fontSize: 11, color: S.mint, marginTop: 2 }}>Tier {tier}</div></Card> 
+                            <Card><div style={{ fontSize: 11, color: S.muted }}>RP & RANK</div><div style={{ fontSize: 16, fontWeight: 700, color: S.gold }}>{fmtRp(rp)} RP <span style={{ fontSize: 12, color: S.muted }}>(#{rpRank})</span></div><div style={{ fontSize: 11, color: S.mint, marginTop: 2 }}>Tier {tier}</div></Card> 
                         </div> 
                         <Card style={{ marginBottom: 16 }}> 
                             <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>SPECIALIZATION</div> 
@@ -1366,10 +1437,10 @@
         // ============================================================ // HISTORY // ============================================================ 
         function HistoryTab({ state }) { 
             const h = state.human; const history = [...h.careerHistory].reverse().slice(0, 200); 
-            const icFor = (type) => ({ task:'📚', tournament_win:'🏆', tournament:'🎯', title:'⭐', pet:'🐾', tier:'🏅', quest:'🎁' }[type] || '•'); 
+            const icFor = (type) => ({ task:'📚', ranked_win:'⚔️', ranked_match:'🛡️', title:'⭐', pet:'🐾', tier:'🏅', quest:'🎁' }[type] || '•'); 
             return ( 
                 <div className="ac-fade"> 
-                    <Section title="Career History" sub="Recent milestones"> 
+                    <Section title="Career History" sub="Recent milestones in Season RISE"> 
                         <Card> 
                             {history.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No history yet.</div> : ( 
                                 <div style={{ maxHeight: 600, overflowY: 'auto' }}> 
@@ -1379,8 +1450,8 @@
                                             <div style={{ flex: 1 }}> 
                                                 <div style={{ fontSize: 13 }}> 
                                                     {e.type === 'task' && <>{e.taskId ? e.taskId.replace(/_/g,' ') : 'Task'} <span style={{ color: S.lavender, fontWeight: 700 }}>+{e.xp} XP</span></>} 
-                                                    {e.type === 'tournament_win' && <><strong style={{ color: S.gold }}>Won {e.note}</strong> · {fmtSigned(e.tp)} TP</>} 
-                                                    {e.type === 'tournament' && <>{e.note} · {fmtSigned(e.tp)} TP</>} 
+                                                    {e.type === 'ranked_win' && <><strong style={{ color: S.mint }}>{e.note}</strong> · <span style={{ color: S.gold }}>+{e.rp} RP</span></>} 
+                                                    {e.type === 'ranked_match' && <>{e.note} · <span style={{ color: e.rp < 0 ? S.danger : S.muted }}>{e.rp} RP</span></>} 
                                                     {e.type === 'title' && <><strong>Title unlocked: {e.title}</strong></>} 
                                                     {e.type === 'pet' && <>{e.note}</>} 
                                                     {e.type === 'tier' && <><strong>{e.note}</strong></>} 
@@ -1401,11 +1472,11 @@
         // ============================================================ // MAIN APP // ============================================================ 
         const TABS = [ 
             { id:'dashboard', label:'Dashboard', icon:'🏠' }, 
+            { id:'ranked', label:'Ranked', icon:'⚔️' }, 
             { id:'assignments', label:'Assignments', icon:'📐' }, 
             { id:'studying', label:'Studying', icon:'📚' }, 
             { id:'othertasks', label:'Other Tasks', icon:'🧹' }, 
             { id:'mocks', label:'Mock Tests', icon:'📝' }, 
-            { id:'tournaments', label:'Tournaments', icon:'🏆' }, 
             { id:'ranks', label:'Titles & Tiers', icon:'🏅' }, 
             { id:'quests', label:'Quests', icon:'🎯' }, 
             { id:'leaderboards', label:'Leaderboards', icon:'📊' }, 
@@ -1452,8 +1523,17 @@
                 setLoaded(true); 
 
                 const saveIv = setInterval(() => { if (stateRef.current) { const ok = saveState(stateRef.current); setSavedStatus(ok ? Date.now() : 'failed'); } }, 20000); 
-                const tickIv = setInterval(() => { if (!stateRef.current) return; runTick(stateRef.current, catalogRef.current, false); bump(); }, 30000); 
-                const renderIv = setInterval(() => { bump(); }, 1000); 
+                const tickIv = setInterval(() => { if (!stateRef.current) return; runTick(stateRef.current, catalogRef.current, false); bump(); }, 15000); 
+                const renderIv = setInterval(() => { 
+                    if (stateRef.current?.human?.activeMatch && Date.now() >= stateRef.current.human.activeMatch.end) {
+                        const res = resolveRankedMatch(stateRef.current, catalogRef.current);
+                        if (res) {
+                            toastMsg(res.outcome === 'win' ? `🏆 Ranked Victory! +${res.rpDelta} RP` : res.outcome === 'loss' ? `💀 Ranked Defeat (${res.rpDelta} RP)` : `🤝 Ranked Draw (0 RP)`);
+                            if (res.outcome === 'win') FX.burst(['⚔️','🏆','✨']);
+                        }
+                    }
+                    bump(); 
+                }, 1000); 
                 const clk = e => { if (e.target.closest && e.target.closest('button')) FX.play('click'); }; 
                 document.addEventListener('click', clk); 
 
@@ -1470,7 +1550,12 @@
                 return xp; 
             }, [update, toastMsg]); 
 
-            const handleJoin = useCallback((tid) => { let ok = false; update(s => { ok = joinTournament(s, tid); }); return ok; }, [update]); 
+            const handleStartMatch = useCallback((mode) => { 
+                let ok = false; 
+                update(s => { ok = startRankedBattle(s, catalogRef.current, mode); }); 
+                return ok; 
+            }, [update]); 
+
             const handleHatch = useCallback(() => { let pet = null; update(s => { pet = hatchEgg(s); }); return pet; }, [update]); 
             const handleEquip = useCallback((id) => { update(s => { s.human.equippedPet = s.human.equippedPet === id ? null : id; }); }, [update]); 
             
@@ -1487,8 +1572,8 @@
             const handleBuyPotion = useCallback((type) => {
                 update(s => {
                     const def = POTIONS[type];
-                    if (s.human.tp < def.cost) return;
-                    s.human.tp = round2(s.human.tp - def.cost);
+                    if (s.human.rp < def.cost) return;
+                    s.human.rp = Math.max(0, s.human.rp - def.cost);
                     const ex = s.human.inventory.potions.find(p => p.type === type);
                     if (ex) ex.quantity++;
                     else s.human.inventory.potions.push({ type, quantity: 1 });
@@ -1526,7 +1611,7 @@
                     const data = JSON.stringify(stateRef.current, null, 2); 
                     const blob = new Blob([data], { type: 'application/json' }); 
                     const url = URL.createObjectURL(blob); 
-                    const a = document.createElement('a'); a.href = url; a.download = `academia-save-${todayKey()}.json`; 
+                    const a = document.createElement('a'); a.href = url; a.download = `academia-rise-${todayKey()}.json`; 
                     document.body.appendChild(a); a.click(); document.body.removeChild(a); 
                     setTimeout(() => URL.revokeObjectURL(url), 1000); 
                     toastMsg('💾 Save exported to file!'); 
@@ -1542,8 +1627,8 @@
                         if (!data.human || !data.ai) throw new Error('Invalid save data'); 
                         const defaults = initHumanState(); 
                         data.human = { ...defaults, ...data.human }; 
-                        if (!data.tournaments) data.tournaments = {}; 
                         if (!data.profiles) data.profiles = {}; 
+                        if (!data.recentMatches) data.recentMatches = [];
                         stateRef.current = data; 
                         saveState(data); 
                         setSaveModal(false); 
@@ -1559,13 +1644,11 @@
             const catalog = catalogRef.current; 
             const state = stateRef.current; 
             const lbXP = useMemo(() => state ? buildXPLeaderboard(state, catalog) : [], [state?.human.xp, state?.ai, lbTick, catalog, state?.profiles]); 
-            const lbTP = useMemo(() => state ? buildTPLeaderboard(state, catalog) : [], [state?.human.tp, state?.ai, lbTick, catalog, state?.profiles]); 
+            const lbRP = useMemo(() => state ? buildRPLeaderboard(state, catalog) : [], [state?.human.rp, state?.ai, lbTick, catalog, state?.profiles]); 
             
             if (!loaded || !catalog || !state) { 
-                return <div style={{ padding: 40, textAlign:'center', color: S.muted }}>Loading Academia...</div>; 
+                return <div style={{ padding: 40, textAlign:'center', color: S.muted }}>Loading Academia: Season RISE...</div>; 
             } 
-            
-            const lastSave = savedStatus === 'failed' ? 'Storage unavailable' : new Date(state.lastSave || Date.now()).toLocaleTimeString(); 
 
             return ( 
                 <div style={{ minHeight:'100vh' }}> 
@@ -1574,10 +1657,11 @@
                         <div style={{ maxWidth: 1200, margin:'0 auto', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}> 
                             <div style={{ display:'flex', alignItems:'center', gap: 10 }}> 
                                 <div style={{ fontSize: 22, fontWeight: 800, letterSpacing:'-0.5px', background: `linear-gradient(135deg, ${S.lavender}, ${S.pink}, ${S.gold})`, backgroundSize:'200% auto', animation:'shimmer 6s linear infinite', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>ACADEMIA</div> 
+                                <span style={{ fontSize: 10, fontWeight: 800, color: S.pink, border: `1px solid ${S.pink}66`, padding: '2px 6px', borderRadius: 4 }}>SEASON RISE</span>
                             </div> 
                             <div style={{ display:'flex', gap: 12, alignItems:'center', fontSize: 12, flexWrap:'wrap' }}> 
                                 <div><span style={{ color: S.muted }}>XP:</span> <strong style={{ color: S.lavender }}>{fmtInt(state.human.xp)}</strong></div> 
-                                <div><span style={{ color: S.muted }}>TP:</span> <strong style={{ color: S.gold }}>{fmtTp(state.human.tp)}</strong></div> 
+                                <div><span style={{ color: S.muted }}>RP:</span> <strong style={{ color: S.gold }}>{fmtRp(state.human.rp)}</strong></div> 
                                 <div><span style={{ color: S.muted }}>Combo:</span> <strong style={{ color: S.pink }}>{state.human.combo}×</strong></div> 
                                 <button className="ac-btn ac-btn-primary" style={{ padding:'8px 14px', fontSize: 12 }} onClick={() => setSaveModal(true)}> 💾 Save </button> 
                                 <button className="ac-btn" style={{ padding:'8px 12px', fontSize: 12 }} onClick={() => { FX.muted = !FX.muted; try { localStorage.setItem('academia_mute', FX.muted ? '1' : '0'); } catch (e) {} bump(); }}>{FX.muted ? '🔇' : '🔊'}</button> 
@@ -1594,23 +1678,23 @@
                         </div> 
                     </div> 
                     <div style={{ maxWidth: 1200, margin:'0 auto', padding:'20px 16px 60px', position:'relative', zIndex:1 }}> 
-                        {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onNav={setTab} onOpenProfile={setProfileModalId} />} 
+                        {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onNav={setTab} onOpenProfile={setProfileModalId} />} 
+                        {tab === 'ranked' && <RankedTab state={state} catalog={catalog} lbRP={lbRP} onStartMatch={handleStartMatch} toast={toastMsg} onOpenProfile={setProfileModalId} />} 
                         {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'othertasks' && <OtherTasksTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
-                        {tab === 'tournaments' && <TournamentsTab state={state} catalog={catalog} onJoin={handleJoin} toast={toastMsg} onOpenProfile={setProfileModalId} />} 
-                        {tab === 'ranks' && <TitlesTab state={state} lbTP={lbTP} />} 
+                        {tab === 'ranks' && <TitlesTab state={state} lbRP={lbRP} />} 
                         {tab === 'quests' && <QuestsTab state={state} onClaim={handleClaim} toast={toastMsg} />} 
-                        {tab === 'leaderboards' && <LeaderboardTab state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onOpenProfile={setProfileModalId} />} 
+                        {tab === 'leaderboards' && <LeaderboardTab state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onOpenProfile={setProfileModalId} />} 
                         {tab === 'pets' && <PetsTab state={state} onHatch={handleHatch} onEquip={handleEquip} toast={toastMsg} />} 
                         {tab === 'inventory' && <InventoryTab state={state} onUsePotion={handleUsePotion} onBuyPotion={handleBuyPotion} toast={toastMsg} />} 
-                        {tab === 'profile' && <ProfileModal playerId="human" state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onClose={() => {}} onSaveProfile={handleSaveProfile} />} 
+                        {tab === 'profile' && <ProfileModal playerId="human" state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onClose={() => {}} onSaveProfile={handleSaveProfile} />} 
                         {tab === 'history' && <HistoryTab state={state} />} 
                     </div> 
                     {saveModal && <SaveModal state={state} onExport={handleExport} onImport={handleImport} onClose={() => setSaveModal(false)} />} 
                     {welcomeBack !== null && <WelcomeBack elapsedMs={welcomeBack} onClose={() => setWelcomeBack(null)} />} 
-                    {profileModalId !== null && <ProfileModal playerId={profileModalId} state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onClose={() => setProfileModalId(null)} onSaveProfile={handleSaveProfile} />} 
+                    {profileModalId !== null && <ProfileModal playerId={profileModalId} state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onClose={() => setProfileModalId(null)} onSaveProfile={handleSaveProfile} />} 
                     <Toast msg={toast} onDone={() => setToast(null)} /> 
                 </div> 
             ); 
