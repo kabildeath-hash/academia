@@ -125,6 +125,68 @@
             { id: 'deadly', name: 'Deadly', hours: 6, icon: '💀', desc: '6-hour ultimate test' }
         ];
 
+        // ============================================================ // RANKED CATEGORIES // ============================================================
+        // Ranked is split into three independent ladders. Each has its own ELO pool
+        // and its own leaderboard, so the #1 in Assignments need not be the #1 in Studying.
+        // The category you're currently "queued" into decides which ladder a battle feeds,
+        // and only tasks of that category count toward an active battle's XP.
+        const RANKED_CATEGORIES = [
+            { id: 'assignments', name: 'Assignments', icon: '📐', color: '#c4b5fd',
+              desc: 'Assignment & project tasks. Grind out pages to out-pace your rival.',
+              taskTypes: ['assignment'], taskIds: null,
+              startRp: 1000, peakHours: [9, 11, 14, 21] },
+            { id: 'studying',    name: 'Studying',    icon: '📚', color: '#f5b3d3',
+              desc: 'Recall pages, numerical problems and definitions. Memory vs. memory.',
+              taskTypes: ['study'], taskIds: ['recall_page', 'recall_problem', 'recall_defs'],
+              startRp: 1000, peakHours: [7, 16, 22] },
+            { id: 'other',       name: 'Other',       icon: '🧹', color: '#a8e6cf',
+              desc: 'Lifestyle, productivity & mock tests. Slow, steady, high-value duels.',
+              taskTypes: ['othertask', 'mock'], taskIds: null,
+              startRp: 1000, peakHours: [8, 19, 20] }
+        ];
+        const RANKED_CAT_BY_ID = {};
+        RANKED_CATEGORIES.forEach(c => RANKED_CAT_BY_ID[c.id] = c);
+        // Map a completed task to the ranked category it belongs to (null = none).
+        function taskCategoryOf(taskType, taskId) {
+            for (const c of RANKED_CATEGORIES) {
+                if (c.taskTypes && c.taskTypes.indexOf(taskType) >= 0) return c.id;
+                if (c.taskIds && taskId && c.taskIds.indexOf(taskId) >= 0) return c.id;
+            }
+            return null;
+        }
+        // Task type filter helper: should this completed task count toward an active battle in category `cat`?
+        function taskCountsForCategory(taskType, taskId, cat) {
+            const tcat = taskCategoryOf(taskType, taskId);
+            return tcat !== null && tcat === cat;
+        }
+
+        // ---- Per-category RP accessors ----
+        // Human: rpByCat holds each ladder's rating; human.rp is the spendable currency (kept in sync as the
+        // sum of the three ladders, so ranked progress still funds the potion shop). AI: rpByCat holds each
+        // ladder's rating; ai[id].rp is a legacy mirror of their highest category for old display paths.
+        function getCatRp(state, id, cat) {
+            if (id === 'human') return (state.human.rpByCat && state.human.rpByCat[cat] != null) ? state.human.rpByCat[cat] : 0;
+            const a = state.ai[id];
+            return (a && a.rpByCat && a.rpByCat[cat] != null) ? a.rpByCat[cat] : 0;
+        }
+        function setCatRp(state, id, cat, val) {
+            const v = Math.max(0, Math.floor(val));
+            if (id === 'human') { state.human.rpByCat = state.human.rpByCat || {}; state.human.rpByCat[cat] = v; }
+            else { const a = state.ai[id]; if (!a) return; a.rpByCat = a.rpByCat || {}; a.rpByCat[cat] = v; }
+        }
+        // Recompute human.rp (currency) as the sum of category ratings. Call after any RP mutation.
+        // NOTE: human.rp is now a standalone spendable currency (reset to 0 at season start, earned from
+        // ranked play), NOT a mirror of the ladder ratings. This function is kept as a no-op so existing
+        // call sites stay valid, but it must not clobber the currency.
+        function syncHumanRpCurrency(state) { /* currency is independent of ladder RP */ }
+        // Recompute an AI's legacy .rp mirror as their best category rating.
+        function syncAiRpMirror(state, id) {
+            const a = state.ai[id]; if (!a) return;
+            let best = 0;
+            for (const c of RANKED_CATEGORIES) best = Math.max(best, getCatRp(state, id, c.id));
+            a.rp = best;
+        }
+
         const FX = {
           muted: (() => { try { return localStorage.getItem('academia_mute') === '1'; } catch (e) { return false; } })(),
           ctx: null,
@@ -269,43 +331,71 @@
 
         // ============================================================ // STATE & PERSISTENCE // ============================================================ 
         const SAVE_KEY = 'academia_rise_v1'; 
-        const STATE_VERSION = 4; 
+        const STATE_VERSION = 5;
         
-        function initHumanState() { 
-            const now = Date.now(); 
-            return { 
-                name: 'Aria Nakamura', xp: 0, rp: 1000, combo: 0, comboProgress: 0, comboExpiry: 0, highestCombo: 0, streak: 0, longestStreak: 0, lastTaskDay: null, tasksCompleted: 0, assignmentsCompleted: 0, recalledPages: 0, numericalProblems: 0, definitionsRecalled: 0, mockTestsCompleted: 0, mockScoreSum: 0, 
+        function initHumanState() {
+            const now = Date.now();
+            // Per-category ranked rating. Each ladder starts fresh (reset to 0 → startRp via initState).
+            const rpByCat = {};
+            const rankedWinsByCat = {}, rankedLossesByCat = {}, rankedDrawsByCat = {};
+            const oppHistoryByCat = {};
+            RANKED_CATEGORIES.forEach(c => {
+                rpByCat[c.id] = c.startRp;
+                rankedWinsByCat[c.id] = 0;
+                rankedLossesByCat[c.id] = 0;
+                rankedDrawsByCat[c.id] = 0;
+                oppHistoryByCat[c.id] = {};
+            });
+            return {
+                name: 'Aria Nakamura', xp: 0, rp: 0, rpByCat,
+                rankedCategory: 'assignments', // which ladder the next battle feeds
+                combo: 0, comboProgress: 0, comboExpiry: 0, highestCombo: 0, streak: 0, longestStreak: 0, lastTaskDay: null, tasksCompleted: 0, assignmentsCompleted: 0, recalledPages: 0, numericalProblems: 0, definitionsRecalled: 0, mockTestsCompleted: 0, mockScoreSum: 0,
                 rankedWins: 0, rankedLosses: 0, rankedDraws: 0,
+                rankedWinsByCat, rankedLossesByCat, rankedDrawsByCat,
                 activeMatch: null,
-                opponentHistory: {},
-                quests: { daily: { date: null, progress: {}, claimed: {} }, weekly: { week: null, progress: {}, claimed: {} } }, 
-                inventory: { eggs: 0, potions: [{ type: 'double_xp', quantity: 2 }, { type: 'golden_study', quantity: 1 }], pets: [] }, 
-                equippedPet: null, activePotion: null, 
-                dailyStats: { date: todayKey(), tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, rankedMatches: 0, comboMax: 0 }, 
-                weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, rankedWins: 0 }, 
-                careerHistory: [], highestTitle: 0, highestTier: 'LT4', tierHistory: [], dailyXpLog: {}, 
-                customization: { frame:'default', color:'#c4b5fd', badge:'⭐', avatar:'🦊', motto:'Focus & Discipline', bio:'Aiming for the top.' }, 
-                lastSave: now, lastTick: now 
-            }; 
-        } 
+                opponentHistory: {}, oppHistoryByCat,
+                quests: { daily: { date: null, progress: {}, claimed: {} }, weekly: { week: null, progress: {}, claimed: {} } },
+                inventory: { eggs: 0, potions: [{ type: 'double_xp', quantity: 2 }, { type: 'golden_study', quantity: 1 }], pets: [] },
+                equippedPet: null, activePotion: null,
+                dailyStats: { date: todayKey(), tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, rankedMatches: 0, comboMax: 0 },
+                weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, rankedWins: 0 },
+                careerHistory: [], highestTitle: 0, highestTier: 'LT4', tierHistory: [], dailyXpLog: {},
+                customization: { frame:'default', color:'#c4b5fd', badge:'⭐', avatar:'🦊', motto:'Focus & Discipline', bio:'Aiming for the top.' },
+                lastSave: now, lastTick: now
+            };
+        }
 
-        function initState(catalog) { 
-            const aiState = {}; 
-            for (const p of catalog) { 
-                if (p.id === 'human') continue; 
+        function initState(catalog) {
+            const aiState = {};
+            for (const p of catalog) {
+                if (p.id === 'human') continue;
                 const rng = mulberry32(hashStr(p.id));
-                aiState[p.id] = { 
-                    xp: p.aiProfile.initialXP, 
-                    rp: p.aiProfile.initialRP, 
-                    energy: rand(rng, 0.7, 1.3), 
-                    streak: randInt(rng, 0, 15), 
-                    offUntil: 0, 
-                    retired: false 
-                }; 
-            } 
-            const human = initHumanState(); 
-            human.highestTitle = 0; 
-            return { version: STATE_VERSION, createdAt: Date.now(), lastTick: Date.now(), human, ai: aiState, profiles: {}, recentMatches: [] }; 
+                // Per-category RP for AI competitors. Everyone starts at the same baseline (fresh season).
+                const rpByCat = {};
+                RANKED_CATEGORIES.forEach(c => { rpByCat[c.id] = c.startRp; });
+                aiState[p.id] = {
+                    xp: 0,                       // reset to 0
+                    rp: 0,                       // legacy mirror of best category (kept in sync)
+                    rpByCat,
+                    energy: rand(rng, 0.7, 1.3),
+                    streak: 0,
+                    offUntil: 0,
+                    retired: false,
+                    // personality/mood state for realistic cadence
+                    mood: 0,                     // -1..+1, drifts over time
+                    slumpUntil: 0,               // timestamp until which the AI underperforms
+                    streakHeat: 0,               // builds during winning streaks, boosts confidence
+                    sessionEnd: 0,               // timestamp until which the AI is "in a study session"
+                    lastDuelTs: 0,               // throttles back-to-back duels
+                    catHeat: RANKED_CATEGORIES.reduce((o, c) => { o[c.id] = 0; return o; }, {}) // per-category recent activity
+                };
+            }
+            const human = initHumanState();
+            human.highestTitle = 0;
+            // Sync legacy mirrors so old display paths see the fresh season rating.
+            syncHumanRpCurrency({ human, ai: aiState });
+            for (const p of catalog) if (p.id !== 'human') syncAiRpMirror({ human, ai: aiState }, p.id);
+            return { version: STATE_VERSION, createdAt: Date.now(), lastTick: Date.now(), human, ai: aiState, profiles: {}, recentMatches: [] };
         } 
 
         function loadState(catalog) { 
@@ -316,10 +406,29 @@
                 if (!s || s.version !== STATE_VERSION) return null; 
                 if (!s.human || !s.ai) return null; 
                 const defaults = initHumanState(); 
-                s.human = { ...defaults, ...s.human }; 
-                if (!s.profiles) s.profiles = {}; 
+                s.human = { ...defaults, ...s.human };
+                // Backfill per-category ranked fields for any v5 save that predates a given field.
+                if (!s.human.rpByCat) { s.human.rpByCat = {}; RANKED_CATEGORIES.forEach(c => s.human.rpByCat[c.id] = c.startRp); }
+                if (!s.human.rankedCategory) s.human.rankedCategory = 'assignments';
+                if (!s.human.rankedWinsByCat) { s.human.rankedWinsByCat = {}; RANKED_CATEGORIES.forEach(c => s.human.rankedWinsByCat[c.id] = 0); }
+                if (!s.human.rankedLossesByCat) { s.human.rankedLossesByCat = {}; RANKED_CATEGORIES.forEach(c => s.human.rankedLossesByCat[c.id] = 0); }
+                if (!s.human.rankedDrawsByCat) { s.human.rankedDrawsByCat = {}; RANKED_CATEGORIES.forEach(c => s.human.rankedDrawsByCat[c.id] = 0); }
+                if (!s.human.oppHistoryByCat) { s.human.oppHistoryByCat = {}; RANKED_CATEGORIES.forEach(c => s.human.oppHistoryByCat[c.id] = {}); }
+                if (s.human.activeMatch && !s.human.activeMatch.category) s.human.activeMatch.category = s.human.rankedCategory || 'assignments';
+                // Backfill AI per-category + personality fields.
+                for (const id of Object.keys(s.ai || {})) {
+                    const a = s.ai[id];
+                    if (!a.rpByCat) { a.rpByCat = {}; RANKED_CATEGORIES.forEach(c => a.rpByCat[c.id] = c.startRp); }
+                    if (a.mood == null) a.mood = 0;
+                    if (a.slumpUntil == null) a.slumpUntil = 0;
+                    if (a.streakHeat == null) a.streakHeat = 0;
+                    if (a.sessionEnd == null) a.sessionEnd = 0;
+                    if (a.lastDuelTs == null) a.lastDuelTs = 0;
+                    if (!a.catHeat) { a.catHeat = {}; RANKED_CATEGORIES.forEach(c => a.catHeat[c.id] = 0); }
+                }
+                if (!s.profiles) s.profiles = {};
                 if (!s.recentMatches) s.recentMatches = [];
-                return s; 
+                return s;
             } catch (e) { 
                 console.warn('Save load failed:', e); 
                 return null; 
@@ -437,12 +546,13 @@ async function readFromHandle(handle) {
             return Math.max(1, transfer);
         }
 
-        function findClosestOpponent(humanRp, state, catalog) {
+        function findClosestOpponent(humanRp, state, catalog, category) {
+            // Matchmake within a single category ladder. `category` is a RANKED_CATEGORIES id.
             const candidates = catalog.filter(p => p.id !== 'human' && !state.ai[p.id]?.retired);
             candidates.sort((a, b) => {
-                const diffA = Math.abs((state.ai[a.id]?.rp || 1000) - humanRp);
-                const diffB = Math.abs((state.ai[b.id]?.rp || 1000) - humanRp);
-                return diffA - diffB;
+                const ra = category ? getCatRp(state, a.id, category) : (state.ai[a.id]?.rp || 1000);
+                const rb = category ? getCatRp(state, b.id, category) : (state.ai[b.id]?.rp || 1000);
+                return Math.abs(ra - humanRp) - Math.abs(rb - humanRp);
             });
             const topPool = candidates.slice(0, 12);
             return pick(Math.random, topPool);
@@ -455,46 +565,63 @@ async function readFromHandle(handle) {
 
             const oppId = m.opponentId;
             const oppState = state.ai[oppId];
-            const oppRp = oppState ? oppState.rp : 1000;
-            const humanRp = h.rp;
+            const cat = m.category || h.rankedCategory || 'assignments';
+            const oppRp = oppState ? getCatRp(state, oppId, cat) : RANKED_CAT_BY_ID[cat].startRp;
+            const humanRp = getCatRp(state, 'human', cat);
 
             const myXp = m.humanXp || 0;
             const oppXp = Math.floor(m.targetOppXp);
 
             let outcome = 'draw';
             let transfer = 0;
+            const oppHist = (h.oppHistoryByCat && h.oppHistoryByCat[cat]) || {};
 
             if (myXp > oppXp) {
                 outcome = 'win';
-                const repeats = h.opponentHistory[oppId] || 0;
+                const repeats = oppHist[oppId] || 0;
                 transfer = calcEloTransfer(humanRp, oppRp, repeats);
                 const actualGain = Math.min(transfer, oppRp); // Cannot drop opponent below 0
-                h.rp += actualGain;
-                if (oppState) oppState.rp = Math.max(0, oppState.rp - actualGain);
+                setCatRp(state, 'human', cat, humanRp + actualGain);
+                if (oppState) setCatRp(state, oppId, cat, oppRp - actualGain);
                 h.rankedWins += 1;
+                h.rankedWinsByCat[cat] = (h.rankedWinsByCat[cat] || 0) + 1;
                 h.weeklyStats.rankedWins = (h.weeklyStats.rankedWins || 0) + 1;
-                h.opponentHistory[oppId] = repeats + 1;
+                oppHist[oppId] = repeats + 1;
+                h.oppHistoryByCat[cat] = oppHist;
+                // Spendable currency: each win banks a few coins for the potion shop.
+                h.rp = (h.rp || 0) + Math.max(5, Math.round(actualGain * 0.5));
                 transfer = actualGain;
             } else if (oppXp > myXp) {
                 outcome = 'loss';
                 transfer = calcEloTransfer(oppRp, humanRp, 0);
                 const actualLoss = Math.min(transfer, humanRp); // Cannot drop human below 0
-                h.rp = Math.max(0, h.rp - actualLoss);
-                if (oppState) oppState.rp += actualLoss;
+                setCatRp(state, 'human', cat, Math.max(0, humanRp - actualLoss));
+                if (oppState) setCatRp(state, oppId, cat, oppRp + actualLoss);
                 h.rankedLosses += 1;
+                h.rankedLossesByCat[cat] = (h.rankedLossesByCat[cat] || 0) + 1;
+                // A small consolation coin for participating.
+                h.rp = (h.rp || 0) + 2;
                 transfer = -actualLoss;
             } else {
                 outcome = 'draw';
                 transfer = 0;
                 h.rankedDraws += 1;
+                h.rankedDrawsByCat[cat] = (h.rankedDrawsByCat[cat] || 0) + 1;
+                h.rp = (h.rp || 0) + 3;
             }
 
+            syncHumanRpCurrency(state);
+            if (oppState) syncAiRpMirror(state, oppId);
             h.activeMatch = null;
             const oppProf = getProfile(oppId, catalog, state);
+            const catMeta = RANKED_CAT_BY_ID[cat] || {};
             const record = {
                 ts: Date.now(),
                 mode: m.modeName,
                 hours: m.hours,
+                category: cat,
+                categoryIcon: catMeta.icon || '',
+                categoryName: catMeta.name || cat,
                 oppId,
                 oppName: oppProf.name,
                 myXp,
@@ -509,110 +636,215 @@ async function readFromHandle(handle) {
             h.careerHistory.push({
                 ts: Date.now(),
                 type: outcome === 'win' ? 'ranked_win' : 'ranked_match',
-                note: `${m.modeName} Ranked vs ${oppProf.name} (${outcome.toUpperCase()})`,
+                note: `${catMeta.name || cat} ${m.modeName} Ranked vs ${oppProf.name} (${outcome.toUpperCase()})`,
                 rp: transfer
             });
 
             return record;
         }
 
-        // ============================================================ // ADVANCED AI SIMULATION & BACKGROUND ELO // ============================================================ 
-        function getActivityMultiplier(hour, weekday, peakHour) {
-            const dist = Math.abs(hour - peakHour);
-            const circadian = Math.max(0.1, 1 - Math.min(dist, 24 - dist) / 12);
-            const weekendDip = (weekday === 0 || weekday === 6) ? 0.8 : 1.0;
-            return circadian * weekendDip;
+        // ============================================================ // ADVANCED AI SIMULATION & BACKGROUND ELO // ============================================================
+        // Realism model: each AI has a personality archetype (peakHour, variability, competitiveness,
+        // joinTendency). On every simulated hour we model:
+        //   1. Circadian activity — a smooth double-peak around the archetype's peakHour, with a
+        //      gentle weekend dip (people study a bit less on weekends).
+        //   2. Mood drift — a slow random walk in [-1,1]. Bad mood days throttle output; good moods boost it.
+        //   3. Sessions — AIs don't grind uniformly. They enter "study sessions" of a few hours during
+        //      which output is high, then take rest gaps. Burst grinders get long gaps between intense
+        //      sessions; consistent scholars get short, even sessions.
+        //   4. Slumps & streaks — occasionally a slump depresses output for 12-48h; winning streaks build
+        //      `streakHeat` that raises confidence and duel willingness.
+        //   5. Per-category specialization — each AI leans on one or two categories more than others
+        //      (memorizers favor Studying, assignment machines favor Assignments, etc.), so each
+        //      ladder's top player is genuinely different people.
+        function getActivityMultiplier(hour, weekday, peakHours) {
+            // peakHours can be a single hour (number) or a list of hours. We compute a smooth
+            // multi-peak profile so AIs feel like they have a real daily rhythm, not a single spike.
+            const peaks = Array.isArray(peakHours) ? peakHours : [peakHours || 14];
+            let best = 0.1;
+            for (const ph of peaks) {
+                const dist = Math.min(Math.abs(hour - ph), 24 - Math.abs(hour - ph));
+                const circ = Math.max(0.1, 1 - dist / 12);
+                if (circ > best) best = circ;
+            }
+            const weekendDip = (weekday === 0 || weekday === 6) ? 0.85 : 1.0;
+            // Late-night (1-5am) is quiet for most archetypes unless they're night owls.
+            const nightDip = (hour >= 1 && hour <= 5) ? 0.6 : 1.0;
+            return best * weekendDip * nightDip;
+        }
+
+        // Map an archetype id to the categories it favors (weights). Affects XP split + duel picks.
+        function archetypeCategoryBias(archetypeName) {
+            const n = (archetypeName || '').toLowerCase();
+            if (n.indexOf('memori') >= 0) return { assignments: 0.6, studying: 1.5, other: 0.7 };
+            if (n.indexOf('assignment') >= 0) return { assignments: 1.6, studying: 0.7, other: 0.6 };
+            if (n.indexOf('ranked') >= 0 || n.indexOf('strateg') >= 0) return { assignments: 1.0, studying: 1.0, other: 1.3 };
+            if (n.indexOf('burst') >= 0) return { assignments: 1.3, studying: 1.1, other: 0.6 };
+            if (n.indexOf('perfection') >= 0) return { assignments: 1.2, studying: 1.2, other: 0.8 };
+            if (n.indexOf('early') >= 0) return { assignments: 1.1, studying: 0.9, other: 1.0 };
+            if (n.indexOf('night') >= 0) return { assignments: 0.9, studying: 1.2, other: 1.0 };
+            if (n.indexOf('prodigy') >= 0) return { assignments: 1.0, studying: 1.3, other: 0.8 };
+            if (n.indexOf('casual') >= 0) return { assignments: 0.7, studying: 0.7, other: 1.2 };
+            return { assignments: 1.0, studying: 1.0, other: 1.0 };
         }
 
         function simulateAIsStep(state, catalog, elapsedMs) {
             const now = Date.now();
             const totalHours = elapsedMs / 3600000;
-            const steps = Math.min(168, Math.max(1, Math.floor(totalHours))); 
+            const steps = Math.min(168, Math.max(1, Math.floor(totalHours)));
             const stepHours = totalHours / steps;
 
             for (let s = 0; s < steps; s++) {
                 const simDate = new Date(now - (steps - s) * stepHours * 3600000);
                 const hour = simDate.getHours();
                 const weekday = simDate.getDay();
-                const bucket = Math.floor(simDate.getTime() / 3600000);
+                const ts = simDate.getTime();
+                const bucket = Math.floor(ts / 3600000);
 
-                // XP Grinding
+                // --- Per-AI XP grinding (realistic cadence) ---
                 for (const p of catalog) {
                     if (p.id === 'human') continue;
-                    const cur = state.ai[p.id]; 
+                    const cur = state.ai[p.id];
                     if (!cur || cur.retired) continue;
-                    if (simDate.getTime() < cur.offUntil) continue;
+                    if (ts < cur.offUntil) continue; // still on a break
 
                     const pr = p.aiProfile;
                     const rng = mulberry32(hashStr(p.id + '_' + bucket));
 
-                    cur.energy = clamp(cur.energy + (rng() - 0.48) * 0.1, 0.3, 1.8);
-                    if (rng() < 0.005) {
-                        cur.offUntil = simDate.getTime() + randInt(rng, 12, 48) * 3600000;
-                        continue;
-                    }
+                    // Energy wanders but recovers toward 1.0 between sessions.
+                    cur.energy = clamp(cur.energy + (rng() - 0.48) * 0.08, 0.25, 1.6);
 
-                    const actMul = getActivityMultiplier(hour, weekday, pr.peakHour || 14);
+                    // Mood drifts as a slow random walk.
+                    cur.mood = clamp((cur.mood || 0) + (rng() - 0.5) * 0.15, -1, 1);
+
+                    // Sessions: if not in one, maybe start one (likelihood depends on activity multiplier).
+                    const peakHours = pr.peakHour ? [pr.peakHour] : [14];
+                    const actMul = getActivityMultiplier(hour, weekday, peakHours);
+                    if (ts > (cur.sessionEnd || 0)) {
+                        // Chance to start a new session scales with activity and joinTendency.
+                        const startChance = 0.05 + 0.20 * actMul * (pr.joinTendency || 0.6);
+                        if (rng() < startChance) {
+                            // Session length: consistent scholars get long steady sessions; burst/prodigy
+                            // get short intense ones; casuals get short light ones.
+                            const base = 1 + Math.round(actMul * 3);
+                            const intensity = pr.variability > 0.7 ? 0.8 : 1.1; // burst types: short but intense
+                            cur.sessionEnd = ts + (base * intensity) * 3600000;
+                            cur.sessionMul = 1.0 + 0.5 * (pr.variability || 0.3);
+                        } else {
+                            // Rest gap: occasional longer breaks (lunch, sleep, life).
+                            cur.sessionMul = 0.0;
+                            if (rng() < 0.02) cur.offUntil = ts + randInt(rng, 6, 30) * 3600000;
+                            continue;
+                        }
+                    }
+                    if (!cur.sessionMul) cur.sessionMul = 1.0;
+
+                    // Slumps: rare, depress output for a stretch.
+                    if (!cur.slumpUntil || ts > cur.slumpUntil) {
+                        if (rng() < 0.004) cur.slumpUntil = ts + randInt(rng, 12, 48) * 3600000;
+                    }
+                    const slumpMul = (cur.slumpUntil && ts < cur.slumpUntil) ? 0.4 : 1.0;
+
+                    // Variability per step.
                     const varMul = Math.max(0.05, 1 + (rng() - 0.5) * pr.variability * 2);
-                    const gain = pr.dailyXpAvg * (stepHours / 24) * actMul * varMul * cur.energy;
+                    // Mood: good mood boosts, bad mood throttles.
+                    const moodMul = 1 + 0.3 * (cur.mood || 0);
+                    // Winning streak heat gives a small confidence boost.
+                    const heatMul = 1 + Math.min(0.4, (cur.streakHeat || 0) * 0.05);
+
+                    const gain = pr.dailyXpAvg * (stepHours / 24) * actMul * varMul * cur.energy * (cur.sessionMul || 1) * slumpMul * moodMul * heatMul;
                     cur.xp += Math.max(0, gain);
+
+                    // Distribute a little "category heat" so duels reflect recent focus.
+                    const bias = archetypeCategoryBias(pr.archetype);
+                    const catPick = mulberry32(hashStr(p.id + '_catpick_' + bucket))();
+                    let acc = 0, chosen = 'assignments';
+                    const total = bias.assignments + bias.studying + bias.other;
+                    for (const c of RANKED_CATEGORIES) { acc += bias[c.id] / total; if (catPick <= acc) { chosen = c.id; break; } }
+                    cur.catHeat = cur.catHeat || {};
+                    cur.catHeat[chosen] = (cur.catHeat[chosen] || 0) + stepHours * 0.5;
+                    // Heat decays slowly so old focus fades.
+                    for (const c of RANKED_CATEGORIES) cur.catHeat[c.id] = Math.max(0, (cur.catHeat[c.id] || 0) - 0.02 * stepHours);
                 }
 
-                // Simulated AI vs AI Ranked ELO Battles
-                const duelRng = mulberry32(bucket + 999);
-                const activeAIs = catalog.filter(p => p.id !== 'human' && !state.ai[p.id]?.retired);
-                activeAIs.sort((a, b) => (state.ai[b.id]?.rp || 1000) - (state.ai[a.id]?.rp || 1000));
-                const duelsCount = Math.min(40, Math.floor(activeAIs.length / 25));
+                // --- Simulated AI vs AI Ranked ELO duels, per category ---
+                // Each category ladder resolves its own duels with its own matchmaking, so the three
+                // leaderboards evolve independently and end up with different top players.
+                for (const cat of RANKED_CATEGORIES) {
+                    const duelRng = mulberry32(bucket + 999 + hashStr(cat));
+                    const activeAIs = catalog.filter(p => p.id !== 'human' && !state.ai[p.id]?.retired && ts >= (state.ai[p.id]?.lastDuelTs || 0));
+                    if (activeAIs.length < 2) continue;
+                    activeAIs.sort((a, b) => getCatRp(state, b.id, cat.id) - getCatRp(state, a.id, cat.id));
 
-                for (let d = 0; d < duelsCount; d++) {
-                    const idx1 = randInt(duelRng, 0, activeAIs.length - 2);
-                    const idx2 = Math.min(activeAIs.length - 1, idx1 + randInt(duelRng, 1, 8));
-                    const p1 = activeAIs[idx1];
-                    const p2 = activeAIs[idx2];
-                    const s1 = state.ai[p1.id];
-                    const s2 = state.ai[p2.id];
-                    if (!s1 || !s2) continue;
+                    // Duel volume scales with how many scholars are active and how competitive this
+                    // category is at this hour. Not a fixed 40 — it breathes with the day.
+                    const duelCount = Math.min(30, Math.max(2, Math.floor(activeAIs.length / 30 * (0.5 + getActivityMultiplier(hour, weekday, cat.peakHours)))));
 
-                    const score1 = p1.aiProfile.dailyXpAvg * s1.energy * rand(duelRng, 0.5, 1.5);
-                    const score2 = p2.aiProfile.dailyXpAvg * s2.energy * rand(duelRng, 0.5, 1.5);
+                    for (let d = 0; d < duelCount; d++) {
+                        const idx1 = randInt(duelRng, 0, activeAIs.length - 2);
+                        const idx2 = Math.min(activeAIs.length - 1, idx1 + randInt(duelRng, 1, 8));
+                        const p1 = activeAIs[idx1];
+                        const p2 = activeAIs[idx2];
+                        const s1 = state.ai[p1.id];
+                        const s2 = state.ai[p2.id];
+                        if (!s1 || !s2) continue;
+                        // Bias: an AI whose archetype favors this category fights harder in it.
+                        const b1 = (archetypeCategoryBias(p1.aiProfile.archetype)[cat.id] || 1);
+                        const b2 = (archetypeCategoryBias(p2.aiProfile.archetype)[cat.id] || 1);
+                        const catHeat1 = 0.7 + Math.min(0.9, (s1.catHeat && s1.catHeat[cat.id] || 0) * 0.1);
+                        const catHeat2 = 0.7 + Math.min(0.9, (s2.catHeat && s2.catHeat[cat.id] || 0) * 0.1);
+                        const score1 = p1.aiProfile.dailyXpAvg * s1.energy * catHeat1 * b1 * rand(duelRng, 0.5, 1.5) * (1 + 0.2 * (s1.mood || 0));
+                        const score2 = p2.aiProfile.dailyXpAvg * s2.energy * catHeat2 * b2 * rand(duelRng, 0.5, 1.5) * (1 + 0.2 * (s2.mood || 0));
 
-                    if (score1 > score2) {
-                        const tr = Math.min(calcEloTransfer(s1.rp, s2.rp, 0), s2.rp);
-                        s1.rp += tr;
-                        s2.rp = Math.max(0, s2.rp - tr);
-                    } else if (score2 > score1) {
-                        const tr = Math.min(calcEloTransfer(s2.rp, s1.rp, 0), s1.rp);
-                        s2.rp += tr;
-                        s1.rp = Math.max(0, s1.rp - tr);
+                        const rp1 = getCatRp(state, p1.id, cat.id);
+                        const rp2 = getCatRp(state, p2.id, cat.id);
+                        if (score1 > score2) {
+                            const tr = Math.min(calcEloTransfer(rp1, rp2, 0), rp2);
+                            setCatRp(state, p1.id, cat.id, rp1 + tr);
+                            setCatRp(state, p2.id, cat.id, Math.max(0, rp2 - tr));
+                            s1.streakHeat = (s1.streakHeat || 0) + 1;
+                            s2.streakHeat = Math.max(0, (s2.streakHeat || 0) - 1);
+                        } else if (score2 > score1) {
+                            const tr = Math.min(calcEloTransfer(rp2, rp1, 0), rp1);
+                            setCatRp(state, p2.id, cat.id, rp2 + tr);
+                            setCatRp(state, p1.id, cat.id, Math.max(0, rp1 - tr));
+                            s2.streakHeat = (s2.streakHeat || 0) + 1;
+                            s1.streakHeat = Math.max(0, (s1.streakHeat || 0) - 1);
+                        }
+                        // Throttle this pair so they don't rematch every hour.
+                        s1.lastDuelTs = ts + randInt(duelRng, 2, 9) * 3600000;
+                        s2.lastDuelTs = ts + randInt(duelRng, 2, 9) * 3600000;
                     }
+                }
+
+                // Keep AI legacy .rp mirror fresh once per simulated hour.
+                if (s % 3 === 0) {
+                    for (const p of catalog) if (p.id !== 'human') syncAiRpMirror(state, p.id);
                 }
             }
 
             enforceVIPAndChurn(state, catalog);
+            // Final mirror sync after a tick.
+            for (const p of catalog) if (p.id !== 'human') syncAiRpMirror(state, p.id);
         }
 
-        function enforceVIPAndChurn(state, catalog) { 
+        function enforceVIPAndChurn(state, catalog) {
+            // Season reset: everyone starts at 0. We no longer auto-boost VIP XP — VIPs must earn
+            // their ladder position like everyone else. We do keep a light churn rule so the very
+            // bottom of the field occasionally "retires" (quits the season), which keeps the
+            // leaderboards from filling with permanently-inactive zero-output scholars.
             const rng = mulberry32(Math.floor(Date.now() / 86400000));
             for (const p of catalog) {
                 if (p.id === 'human' || p.vip) continue;
                 const cur = state.ai[p.id];
                 if (!cur) continue;
-                if (!cur.retired && cur.xp < 5000 && rng() < 0.0001) {
+                // Only churn players who have barely moved in *any* category for a long time.
+                let bestRp = 0;
+                for (const c of RANKED_CATEGORIES) bestRp = Math.max(bestRp, getCatRp(state, p.id, c.id));
+                if (!cur.retired && bestRp <= RANKED_CATEGORIES[0].startRp && cur.xp < 2000 && rng() < 0.00005) {
                     cur.retired = true;
                 }
             }
-
-            for (let pass = 0; pass < 2; pass++) { 
-                const xpList = catalog.map(p => ({ id: p.id, xp: p.id === 'human' ? state.human.xp : (state.ai[p.id]?.xp ?? 0) })).sort((a,b) => b.xp - a.xp); 
-                for (const p of catalog.filter(p=>p.vip)) { 
-                    const rank = xpList.findIndex(x => x.id === p.id) + 1; 
-                    const limit = p.vipTier === 'A' ? 10 : 50; 
-                    if (rank > limit) { 
-                        const targetXp = xpList[(p.vipTier === 'A' ? 4 : 24)].xp + 500; 
-                        if (state.ai[p.id]) state.ai[p.id].xp = Math.max(state.ai[p.id].xp, targetXp); 
-                    } 
-                } 
-            } 
         } 
 
         function runTick(state, catalog, force) { 
@@ -649,10 +881,12 @@ async function readFromHandle(handle) {
                 if (diffDays > 1) state.human.streak = 0; 
             } 
             
-            const rpList = catalog.map(p => ({ id: p.id, rp: p.id === 'human' ? state.human.rp : (state.ai[p.id]?.rp ?? 0) })).sort((a,b) => b.rp - a.rp); 
-            const humanRankRP = rpList.findIndex(x => x.id === 'human') + 1; 
-            const newTier = computeTierForRank(humanRankRP); 
-            const tierOrder = { 'LT4':0,'HT4':1,'LT3':2,'HT3':3,'LT2':4,'HT2':5,'LT1':6,'HT1':7 }; 
+            // Tier is based on the human's rank in their currently-selected ranked category ladder.
+            const catForTier = state.human.rankedCategory || 'assignments';
+            const rpList = catalog.map(p => ({ id: p.id, rp: getCatRp(state, p.id, catForTier) })).sort((a,b) => b.rp - a.rp);
+            const humanRankRP = rpList.findIndex(x => x.id === 'human') + 1;
+            const newTier = computeTierForRank(humanRankRP);
+            const tierOrder = { 'LT4':0,'HT4':1,'LT3':2,'HT3':3,'LT2':4,'HT2':5,'HT1':6,'HT1':7 };
             
             if (tierOrder[newTier] > tierOrder[state.human.highestTier]) { 
                 const oldO = tierOrder[state.human.highestTier]; 
@@ -698,9 +932,11 @@ async function readFromHandle(handle) {
             } 
             h.lastTaskDay = today; 
             
-            // Feed XP into active Ranked Match
+            // Feed XP into active Ranked Match — but only if the task belongs to the battle's category.
             if (h.activeMatch && now < h.activeMatch.end) {
-                h.activeMatch.humanXp = (h.activeMatch.humanXp || 0) + finalXp;
+                if (taskCountsForCategory(taskType, taskId, h.activeMatch.category)) {
+                    h.activeMatch.humanXp = (h.activeMatch.humanXp || 0) + finalXp;
+                }
             }
             
             h.dailyXpLog[today] = (h.dailyXpLog[today] || 0) + finalXp; 
@@ -739,24 +975,34 @@ async function readFromHandle(handle) {
             return finalXp; 
         } 
 
-        function startRankedBattle(state, catalog, mode) {
+        function startRankedBattle(state, catalog, mode, category) {
             const h = state.human;
             if (h.activeMatch) return false;
+            const cat = category || h.rankedCategory || 'assignments';
+            const catMeta = RANKED_CAT_BY_ID[cat];
+            if (!catMeta) return false;
 
-            const opp = findClosestOpponent(h.rp, state, catalog);
+            const myCatRp = getCatRp(state, 'human', cat);
+            const opp = findClosestOpponent(myCatRp, state, catalog, cat);
             if (!opp) return false;
 
             const oppState = state.ai[opp.id];
             const oppDaily = opp.aiProfile.dailyXpAvg || 100;
             const energy = oppState ? oppState.energy : 1.0;
+            // AI category heat biases how hard they push this ladder right now
+            const heat = oppState && oppState.catHeat ? (oppState.catHeat[cat] || 0) : 0;
+            const heatMul = 0.7 + Math.min(0.9, heat * 0.15);
             // Calculate expected XP the opponent will earn over the battle duration
-            const targetOppXp = Math.max(15, Math.floor(oppDaily * (mode.hours / 24) * 2.2 * energy * rand(Math.random, 0.75, 1.35)));
+            const targetOppXp = Math.max(15, Math.floor(oppDaily * (mode.hours / 24) * 2.2 * energy * heatMul * rand(Math.random, 0.75, 1.35)));
 
             const now = Date.now();
             h.activeMatch = {
                 id: 'rm_' + now,
                 modeId: mode.id,
                 modeName: mode.name,
+                category: cat,
+                categoryIcon: catMeta.icon,
+                categoryName: catMeta.name,
                 hours: mode.hours,
                 start: now,
                 end: now + mode.hours * 3600000,
@@ -789,18 +1035,22 @@ async function readFromHandle(handle) {
         } 
 
         // ============================================================ // LEADERBOARD BUILDERS // ============================================================ 
-        function buildXPLeaderboard(state, catalog) { 
-            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, xp: p.id === 'human' ? state.human.xp : (state.ai[p.id]?.xp ?? 0) })); 
-            rows.sort((a,b) => b.xp - a.xp || a.id.localeCompare(b.id)); 
-            rows.forEach((r, i) => { r.rank = i + 1; r.titleIdx = computeTitleIdx(r.xp); r.title = TITLES[r.titleIdx]; }); 
-            return rows; 
-        } 
-        function buildRPLeaderboard(state, catalog) { 
-            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, rp: p.id === 'human' ? state.human.rp : (state.ai[p.id]?.rp ?? 0) })); 
-            rows.sort((a,b) => b.rp - a.rp || a.id.localeCompare(b.id)); 
-            rows.forEach((r, i) => { r.rank = i + 1; r.tier = computeTierForRank(r.rank); }); 
-            return rows; 
-        } 
+        function buildXPLeaderboard(state, catalog) {
+            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, xp: p.id === 'human' ? state.human.xp : (state.ai[p.id]?.xp ?? 0) }));
+            rows.sort((a,b) => b.xp - a.xp || a.id.localeCompare(b.id));
+            rows.forEach((r, i) => { r.rank = i + 1; r.titleIdx = computeTitleIdx(r.xp); r.title = TITLES[r.titleIdx]; });
+            return rows;
+        }
+        // `category` (optional): a RANKED_CATEGORIES id. When provided, ranks by that ladder's RP;
+        // when omitted, ranks by the legacy "best category" mirror (ai.rp / human.rp currency) so
+        // existing callers that don't pass a category keep working.
+        function buildRPLeaderboard(state, catalog, category) {
+            const getRp = (id) => category ? getCatRp(state, id, category) : (id === 'human' ? state.human.rp : (state.ai[id]?.rp ?? 0));
+            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, rp: getRp(p.id) }));
+            rows.sort((a,b) => b.rp - a.rp || a.id.localeCompare(b.id));
+            rows.forEach((r, i) => { r.rank = i + 1; r.tier = computeTierForRank(r.rank); });
+            return rows;
+        }
 
         // ============================================================ // STYLES & COMPONENTS // ============================================================ 
         const S = { bg:'#08080c', bg2:'#0f0f18', panel:'#14141e', panel2:'#1c1c2a', border:'#2a2a3e', borderL:'#3a3a52', text:'#f0ebf8', muted:'#8888a0', lavender:'#c4b5fd', pink:'#f5b3d3', blue:'#a5c9e8', mint:'#a8e6cf', gold:'#f5d78e', danger:'#f38ba8', success:'#a8e6cf' }; 
@@ -992,17 +1242,20 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
         </div>
     );
 }
-        function WelcomeBack({ elapsedMs, onClose }) { return ( <div className="ac-modal-bg"> <div className="ac-modal" style={{ textAlign:'center' }}> <div style={{ fontSize: 56 }}>👋</div> <div style={{ fontSize: 22, fontWeight: 700, marginTop: 12 }}>Welcome back to Season RISE!</div> <div style={{ fontSize: 14, color: S.muted, marginTop: 12, lineHeight: 1.7 }}> You were away for <strong style={{ color: S.lavender }}>{fmtTime(elapsedMs)}</strong>. <br/>Your 999 competitors have been studying and battling in Ranked. </div> <button className="ac-btn ac-btn-primary" style={{ marginTop: 20, padding: '12px 32px' }} onClick={onClose}> Continue </button> </div> </div> ); } 
+        function WelcomeBack({ elapsedMs, onClose }) { return ( <div className="ac-modal-bg"> <div className="ac-modal" style={{ textAlign:'center' }}> <div style={{ fontSize: 56 }}>👋</div> <div style={{ fontSize: 22, fontWeight: 700, marginTop: 12 }}>Welcome back to Season RISE!</div> <div style={{ fontSize: 14, color: S.muted, marginTop: 12, lineHeight: 1.7 }}> You were away for <strong style={{ color: S.lavender }}>{fmtTime(elapsedMs)}</strong>. <br/>Your 999 competitors have been studying and dueling across <strong style={{ color: S.pink }}>three independent ranked ladders</strong> — Assignments, Studying and Other. </div> <button className="ac-btn ac-btn-primary" style={{ marginTop: 20, padding: '12px 32px' }} onClick={onClose}> Continue </button> </div> </div> ); } 
 
-        // ============================================================ // DASHBOARD // ============================================================ 
-        function Dashboard({ state, catalog, lbXP, lbRP, onNav, onOpenProfile }) { 
-            const h = state.human; 
+        // ============================================================ // DASHBOARD // ============================================================
+        function Dashboard({ state, catalog, lbXP, lbRP, lbRPByCat, onNav, onOpenProfile }) {
+            const h = state.human;
             const profile = getProfile('human', catalog, state);
-            const titleIdx = computeTitleIdx(h.xp); 
-            const xpRank = lbXP.find(r => r.id === 'human')?.rank || '?'; 
-            const rpRank = lbRP.find(r => r.id === 'human')?.rank || '?'; 
-            const currentTier = lbRP.find(r => r.id === 'human')?.tier || 'LT4'; 
-            const nextTitleIdx = Math.min(49, titleIdx + 1); 
+            const titleIdx = computeTitleIdx(h.xp);
+            const xpRank = lbXP.find(r => r.id === 'human')?.rank || '?';
+            // RP rank now reflects the human's currently-selected category ladder.
+            const selCat = h.rankedCategory || 'assignments';
+            const lbCat = (lbRPByCat && lbRPByCat[selCat]) || lbRP;
+            const rpRank = lbCat.find(r => r.id === 'human')?.rank || '?';
+            const currentTier = lbCat.find(r => r.id === 'human')?.tier || 'LT4';
+            const nextTitleIdx = Math.min(49, titleIdx + 1);
             const curTitleXp = TITLE_XP[titleIdx]; 
             const nextTitleXp = TITLE_XP[nextTitleIdx]; 
             const comboMult = comboMultiplier(h.combo); 
@@ -1063,7 +1316,25 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
 
                     <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: 16 }}> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>LIFETIME XP</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.lavender }}>{fmtInt(h.xp)}</div> <div style={{ marginTop: 8 }}> <ProgressBar value={h.xp - curTitleXp} max={nextTitleXp - curTitleXp} color={TITLE_COLORS[titleIdx].primary} /> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Next: {TITLES[nextTitleIdx]}</div> </div> </Card> 
-                        <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>RANKED POINTS (RP)</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.gold }}>{fmtRp(h.rp)}</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 8 }}>Tier: {currentTier} · {h.rankedWins}W / {h.rankedLosses}L</div> </Card> 
+                        <Card>
+                            <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>RANKED — {(RANKED_CAT_BY_ID[selCat]||{}).name || 'RP'} <span style={{ fontSize: 10 }}>{(RANKED_CAT_BY_ID[selCat]||{}).icon || ''}</span></div>
+                            <div style={{ fontSize: 26, fontWeight: 800, color: S.gold }}>{fmtRp(getCatRp(state, 'human', selCat))} RP <span style={{ fontSize: 12, color: S.muted }}>#{rpRank}</span></div>
+                            <div style={{ fontSize: 10, color: S.muted, marginTop: 8 }}>Tier: {currentTier} · {(h.rankedWinsByCat||{})[selCat]||0}W / {(h.rankedLossesByCat||{})[selCat]||0}L</div>
+                            <div style={{ display:'flex', gap: 6, marginTop: 8, flexWrap:'wrap' }}>
+                                {RANKED_CATEGORIES.map(c => {
+                                    const rp = getCatRp(state, 'human', c.id);
+                                    const rank = (lbRPByCat && lbRPByCat[c.id]) ? (lbRPByCat[c.id].find(r => r.id === 'human')?.rank || '?') : '?';
+                                    const active = c.id === selCat;
+                                    return (
+                                        <div key={c.id} title={`${c.name}: ${fmtRp(rp)} RP (rank #${rank})`} style={{ flex:'1 1 70px', minWidth: 70, padding: '6px 8px', borderRadius: 8, background: active ? c.color+'22' : S.bg2, border: `1px solid ${active ? c.color : S.border}`, cursor:'pointer', textAlign:'center' }} onClick={() => onNav('ranked')}>
+                                            <div style={{ fontSize: 14 }}>{c.icon}</div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: active ? c.color : S.text }}>{fmtShort(rp)}</div>
+                                            <div style={{ fontSize: 9, color: S.muted }}>#{rank}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>COMBO</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.pink }}>{h.combo}×</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>{comboMult.toFixed(2)}× XP · Next in {10 - h.comboProgress}</div> {h.comboExpiry > 0 && <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>Expires: {fmtTime(h.comboExpiry - Date.now())}</div>} </Card> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>STREAK</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.mint }}>{h.streak} <span style={{ fontSize: 13, color: S.muted }}>days</span></div> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Longest: {h.longestStreak}</div> </Card> 
                     </div> 
@@ -1076,23 +1347,28 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
             ); 
         } 
 
-        // ============================================================ // RANKED BATTLE TAB // ============================================================ 
-        function RankedTab({ state, catalog, lbRP, onStartMatch, toast, onOpenProfile }) {
+        // ============================================================ // RANKED BATTLE TAB // ============================================================
+        function RankedTab({ state, catalog, lbRP, lbRPByCat, onStartMatch, onSetCategory, toast, onOpenProfile }) {
             const h = state.human;
             const now = Date.now();
             const m = h.activeMatch;
-            const myRank = lbRP.find(r => r.id === 'human')?.rank || '?';
+            // The category shown is the active battle's category if one is running, else the selected queue.
+            const cat = (m && m.category) || h.rankedCategory || 'assignments';
+            const catMeta = RANKED_CAT_BY_ID[cat] || RANKED_CATEGORIES[0];
+            const lbCat = (lbRPByCat && lbRPByCat[cat]) || lbRP;
+            const myRank = lbCat.find(r => r.id === 'human')?.rank || '?';
+            const myCatRp = getCatRp(state, 'human', cat);
 
             const handleStart = (mode) => {
-                if (onStartMatch(mode)) {
-                    toast(`⚔️ Started ${mode.name} (${mode.hours}h) Ranked Battle!`);
+                if (onStartMatch(mode, cat)) {
+                    toast(`⚔️ Started ${mode.name} (${mode.hours}h) ${catMeta.name} Ranked!`);
                 } else {
                     toast('Already in an active Ranked Battle.');
                 }
             };
 
             let activeOpponent = null;
-            let oppRp = 1000;
+            let oppRp = catMeta.startRp;
             let oppRank = '?';
             let expectedWinRp = 20;
             let expectedLossRp = 20;
@@ -1100,44 +1376,102 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
 
             if (m) {
                 activeOpponent = getProfile(m.opponentId, catalog, state);
-                oppRp = state.ai[m.opponentId]?.rp || 1000;
-                oppRank = lbRP.find(r => r.id === m.opponentId)?.rank || '?';
-                const repeats = h.opponentHistory[m.opponentId] || 0;
-                expectedWinRp = calcEloTransfer(h.rp, oppRp, repeats);
-                expectedLossRp = calcEloTransfer(oppRp, h.rp, 0);
+                oppRp = getCatRp(state, m.opponentId, cat);
+                oppRank = lbCat.find(r => r.id === m.opponentId)?.rank || '?';
+                const oppHist = (h.oppHistoryByCat && h.oppHistoryByCat[cat]) || {};
+                const repeats = oppHist[m.opponentId] || 0;
+                expectedWinRp = calcEloTransfer(myCatRp, oppRp, repeats);
+                expectedLossRp = calcEloTransfer(oppRp, myCatRp, 0);
                 const frac = clamp((now - m.start) / (m.end - m.start), 0, 1);
                 currentOppXp = Math.floor(m.targetOppXp * frac);
             }
 
+            const catColor = catMeta.color;
+
             return (
                 <div className="ac-fade">
-                    <Section title="Ranked Arena — Season RISE" sub="ELO-based 1v1 duels · K = 40 · Outscore your opponent in XP before time expires">
+                    <Section title="Ranked Arena — Season RISE" sub="Three independent ladders (Assignments / Studying / Other). Pick a category, queue a duel, then out-score your rival in XP from that category's tasks.">
+                        {/* Category picker */}
+                        <Card style={{ marginBottom: 16, borderColor: catColor+'66' }}>
+                            <div style={{ fontSize: 11, color: S.muted, marginBottom: 8 }}>RANKED CATEGORY — pick a ladder to queue into</div>
+                            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                                {RANKED_CATEGORIES.map(c => {
+                                    const active = c.id === cat && !(m && m.category && m.category !== c.id);
+                                    const lockedByMatch = m && m.category && m.category !== c.id;
+                                    const rp = getCatRp(state, 'human', c.id);
+                                    const rank = (lbRPByCat && lbRPByCat[c.id]) ? (lbRPByCat[c.id].find(r => r.id === 'human')?.rank || '?') : '?';
+                                    const w = (h.rankedWinsByCat||{})[c.id]||0, l = (h.rankedLossesByCat||{})[c.id]||0;
+                                    return (
+                                        <div key={c.id} onClick={() => { if (!m && onSetCategory) onSetCategory(c.id); }} style={{ cursor: (m ? 'not-allowed' : 'pointer'), padding: 12, borderRadius: 12, background: active ? c.color+'18' : S.bg2, border: `1.5px solid ${active ? c.color : S.border}`, opacity: lockedByMatch ? 0.55 : 1, position:'relative' }}>
+                                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                                <span style={{ fontSize: 22 }}>{c.icon}</span>
+                                                <span style={{ fontSize: 11, fontWeight: 800, color: active ? c.color : S.muted }}>#{rank}</span>
+                                            </div>
+                                            <div style={{ fontWeight: 700, fontSize: 15, marginTop: 6, color: active ? c.color : S.text }}>{c.name}</div>
+                                            <div style={{ fontSize: 11, color: S.muted, marginTop: 2, minHeight: 30, lineHeight: 1.4 }}>{c.desc}</div>
+                                            <div style={{ display:'flex', justifyContent:'space-between', marginTop: 8, fontSize: 11 }}>
+                                                <span style={{ color: S.gold, fontWeight: 700 }}>{fmtRp(rp)} RP</span>
+                                                <span style={{ color: S.muted }}>{w}W / {l}L</span>
+                                            </div>
+                                            {lockedByMatch && <div style={{ fontSize: 10, color: S.gold, marginTop: 6 }}>🔒 Locked — battle in progress in {(RANKED_CAT_BY_ID[m.category]||{}).name}</div>}
+                                            {active && !lockedByMatch && <div style={{ fontSize: 10, color: c.color, marginTop: 6 }}>● Queued — your tasks here count toward the duel</div>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+
+                        {/* Top 3 of the currently-selected ladder */}
                         <Card style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: 11, color: S.muted, marginBottom: 8 }}>{catMeta.icon} TOP OF THE {catMeta.name.toUpperCase()} LADDER</div>
+                            <div style={{ display:'flex', gap: 10, flexWrap:'wrap' }}>
+                                {lbCat.slice(0, 3).map((r, i) => {
+                                    const prof = getProfile(r.id, catalog, state);
+                                    const medal = ['🥇','🥈','🥉'][i];
+                                    const isHuman = r.id === 'human';
+                                    return (
+                                        <div key={r.id} style={{ flex:'1 1 140px', minWidth: 140, padding: '8px 10px', borderRadius: 10, background: isHuman ? catColor+'18' : S.bg2, border: `1px solid ${isHuman ? catColor : S.border}`, cursor:'pointer' }} onClick={() => onOpenProfile(r.id)}>
+                                            <div style={{ display:'flex', alignItems:'center', gap: 6 }}>
+                                                <span style={{ fontSize: 18 }}>{medal}</span>
+                                                <span style={{ fontSize: 16 }}>{prof.avatar || '🦉'}</span>
+                                            </div>
+                                            <div style={{ fontSize: 12, fontWeight: 700, marginTop: 2, color: isHuman ? S.mint : S.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{prof.name}{isHuman && ' (You)'}</div>
+                                            <div style={{ fontSize: 11, color: catColor, fontWeight: 700 }}>{fmtRp(r.rp)} RP</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+
+                        <Card style={{ marginBottom: 16, borderLeft: `3px solid ${catColor}` }}>
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}>
                                 <div>
-                                    <div style={{ fontSize: 11, color: S.muted }}>YOUR COMPETITIVE RATING</div>
-                                    <div style={{ fontSize: 28, fontWeight: 800, color: S.gold }}>{fmtRp(h.rp)} RP <span style={{ fontSize: 14, color: S.muted }}>(Rank #{myRank})</span></div>
+                                    <div style={{ fontSize: 11, color: S.muted }}>{catMeta.icon} YOUR {catMeta.name.toUpperCase()} RATING</div>
+                                    <div style={{ fontSize: 28, fontWeight: 800, color: catColor }}>{fmtRp(myCatRp)} RP <span style={{ fontSize: 14, color: S.muted }}>(Rank #{myRank} of 1,000)</span></div>
                                 </div>
                                 <div style={{ display:'flex', gap: 16, fontSize: 13 }}>
-                                    <div><span style={{ color: S.mint, fontWeight: 700 }}>{h.rankedWins}</span> Wins</div>
-                                    <div><span style={{ color: S.danger, fontWeight: 700 }}>{h.rankedLosses}</span> Losses</div>
-                                    <div><span style={{ color: S.muted, fontWeight: 700 }}>{h.rankedDraws}</span> Draws</div>
+                                    <div><span style={{ color: S.mint, fontWeight: 700 }}>{(h.rankedWinsByCat||{})[cat]||0}</span> Wins</div>
+                                    <div><span style={{ color: S.danger, fontWeight: 700 }}>{(h.rankedLossesByCat||{})[cat]||0}</span> Losses</div>
+                                    <div><span style={{ color: S.muted, fontWeight: 700 }}>{(h.rankedDrawsByCat||{})[cat]||0}</span> Draws</div>
                                 </div>
                             </div>
                         </Card>
 
                         {m ? (
-                            <Card style={{ marginBottom: 20, borderColor: S.lavender, background: `linear-gradient(135deg, ${S.panel}, ${S.panel2})` }}>
+                            <Card style={{ marginBottom: 20, borderColor: catColor, background: `linear-gradient(135deg, ${S.panel}, ${S.panel2})` }}>
                                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 12, flexWrap:'wrap', gap: 8 }}>
-                                    <span className="ac-pill ac-live" style={{ background: S.danger+'22', color: S.danger }}>🔴 LIVE BATTLE · {m.modeName.toUpperCase()} ({m.hours} HR)</span>
+                                    <span className="ac-pill ac-live" style={{ background: catColor+'22', color: catColor }}>🔴 LIVE · {catMeta.icon} {catMeta.name.toUpperCase()} · {m.modeName.toUpperCase()} ({m.hours} HR)</span>
                                     <span style={{ fontSize: 13, fontWeight: 700, color: S.gold }}>⏱ {fmtTime(m.end - now)} remaining</span>
+                                </div>
+                                <div style={{ fontSize: 12, color: S.muted, marginBottom: 10, padding: '8px 12px', background: S.bg2, borderRadius: 8 }}>
+                                    Only <strong style={{ color: catColor }}>{catMeta.icon} {catMeta.name}</strong> tasks count toward this duel. Complete them from their tab to pull ahead.
                                 </div>
 
                                 <div className="ac-grid" style={{ gridTemplateColumns:'1fr auto 1fr', alignItems:'center', gap: 12, margin: '16px 0' }}>
                                     <div style={{ textAlign:'center', padding: 12, background: S.bg2, borderRadius: 12, border: `1px solid ${m.humanXp >= currentOppXp ? S.mint : S.border}` }}>
-                                        <div style={{ fontSize: 32 }}>🦊</div>
+                                        <div style={{ fontSize: 32 }}>{h.customization?.avatar || '🦊'}</div>
                                         <div style={{ fontWeight: 700, fontSize: 14, marginTop: 4 }}>{h.name} <YouBadge small /></div>
-                                        <div style={{ fontSize: 11, color: S.gold }}>{fmtRp(h.rp)} RP (#{myRank})</div>
+                                        <div style={{ fontSize: 11, color: S.gold }}>{fmtRp(myCatRp)} RP (#{myRank})</div>
                                         <div style={{ fontSize: 22, fontWeight: 800, color: S.lavender, marginTop: 8 }}>{fmtInt(m.humanXp)} XP</div>
                                     </div>
 
@@ -1151,24 +1485,24 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                     </div>
                                 </div>
 
-                                <div style={{ display:'flex', justifyContent:'space-between', fontSize: 12, color: S.muted, padding: '8px 12px', background: S.bg2, borderRadius: 8 }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', fontSize: 12, color: S.muted, padding: '8px 12px', background: S.bg2, borderRadius: 8, flexWrap:'wrap', gap: 6 }}>
                                     <span>Victory Stake: <strong style={{ color: S.mint }}>+{expectedWinRp} RP</strong></span>
                                     <span>Draw: <strong>0 RP</strong></span>
-                                    <span>Defeat Stake: <strong style={{ color: S.danger }}>-{Math.min(expectedLossRp, h.rp)} RP</strong></span>
+                                    <span>Defeat Stake: <strong style={{ color: S.danger }}>-{Math.min(expectedLossRp, myCatRp)} RP</strong></span>
                                 </div>
                             </Card>
                         ) : (
-                            <Section title="Select Battle Duration" sub="Closest-RP matchmaking · All modes use ×1.0 ELO multiplier">
+                            <Section title={`Queue a ${catMeta.name} Duel`} sub={`Closest-RP matchmaking in this ladder · ${catMeta.icon} only ${catMeta.name} tasks count toward your score`}>
                                 <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 20 }}>
                                     {RANKED_MODES.map(mode => (
                                         <Card key={mode.id}>
                                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 8 }}>
                                                 <span style={{ fontSize: 28 }}>{mode.icon}</span>
-                                                <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{mode.hours} HR · ×1.0</span>
+                                                <span className="ac-pill" style={{ background: catColor+'22', color: catColor }}>{mode.hours} HR · ×1.0</span>
                                             </div>
                                             <div style={{ fontWeight: 700, fontSize: 16 }}>{mode.name}</div>
                                             <div style={{ fontSize: 12, color: S.muted, marginTop: 2, marginBottom: 14 }}>{mode.desc}</div>
-                                            <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={() => handleStart(mode)}>Start Ranked Battle</button>
+                                            <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={() => handleStart(mode)}>Start {catMeta.name} Duel</button>
                                         </Card>
                                     ))}
                                 </div>
@@ -1180,14 +1514,17 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                 <Card><div style={{ color: S.muted, fontSize: 13 }}>No completed ranked battles yet.</div></Card>
                             ) : (
                                 <div className="ac-col">
-                                    {state.recentMatches.slice(0, 15).map((rm, i) => (
-                                        <Card key={i} style={{ padding: 12 }}>
+                                    {state.recentMatches.slice(0, 15).map((rm, i) => {
+                                        const rmc = rm.category || 'assignments';
+                                        const rmcMeta = RANKED_CAT_BY_ID[rmc] || RANKED_CATEGORIES[0];
+                                        return (
+                                        <Card key={i} style={{ padding: 12, borderLeft: `3px solid ${rmcMeta.color}` }}>
                                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 8 }}>
                                                 <div>
                                                     <span className="ac-pill" style={{ background: rm.outcome==='win'?S.mint+'22':rm.outcome==='loss'?S.danger+'22':S.muted+'22', color: rm.outcome==='win'?S.mint:rm.outcome==='loss'?S.danger:S.muted, marginRight: 8 }}>
                                                         {rm.outcome.toUpperCase()}
                                                     </span>
-                                                    <strong style={{ fontSize: 13 }}>{rm.mode} ({rm.hours}h) vs. {rm.oppName}</strong>
+                                                    <strong style={{ fontSize: 13 }}>{rmcMeta.icon} {rm.mode} ({rm.hours}h) vs. {rm.oppName}</strong>
                                                     <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Score: {fmtInt(rm.myXp)} XP vs {fmtInt(rm.oppXp)} XP · {new Date(rm.ts).toLocaleString()}</div>
                                                 </div>
                                                 <div style={{ fontSize: 15, fontWeight: 800, color: rm.rpDelta > 0 ? S.mint : rm.rpDelta < 0 ? S.danger : S.muted }}>
@@ -1195,7 +1532,8 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                                 </div>
                                             </div>
                                         </Card>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </Section>
@@ -1296,76 +1634,91 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
         } 
 
         // ============================================================ // LEADERBOARD // ============================================================ 
-        function LeaderboardTab({ state, catalog, lbXP, lbRP, onOpenProfile }) { 
-            const [mode, setMode] = useState('rp'); const [search, setSearch] = useState(''); const [natFilter, setNatFilter] = useState('all'); const [vipFilter, setVipFilter] = useState(false); const [page, setPage] = useState(0); 
-            const pageSize = 50; const lb = mode === 'xp' ? lbXP : lbRP; 
-            const filtered = useMemo(() => { 
-                let rows = lb; 
-                if (search.trim()) { 
-                    const s = search.trim().toLowerCase(); 
-                    rows = rows.filter(r => r.name.toLowerCase().includes(s) || r.username.toLowerCase().includes(s)); 
-                } 
-                if (natFilter !== 'all') rows = rows.filter(r => r.nationality === natFilter); 
-                if (vipFilter) rows = rows.filter(r => r.vip); 
-                return rows; 
-            }, [lb, search, natFilter, vipFilter]); 
-            const totalPages = Math.ceil(filtered.length / pageSize); const safePage = Math.min(page, Math.max(0, totalPages - 1)); 
-            const visible = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize); 
-            const humanRank = lb.find(r => r.id === 'human')?.rank; 
-            
-            return ( 
-                <div className="ac-fade"> 
-                    <Section title="Leaderboards — Season RISE" sub="Live standings across all 1,000 scholars"> 
-                        <div style={{ display:'flex', gap: 8, marginBottom: 14 }}> 
-                            <button className={`ac-tab ${mode==='rp'?'active':''}`} onClick={() => { setMode('rp'); setPage(0); }}>⚔️ Ranked Points (RP)</button> 
-                            <button className={`ac-tab ${mode==='xp'?'active':''}`} onClick={() => { setMode('xp'); setPage(0); }}>📈 Experience (XP)</button> 
-                        </div> 
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap: 8, marginBottom: 14 }}> 
-                            <input className="ac-input" placeholder="Search name or username..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} /> 
-                            <select className="ac-input" style={{ width:'auto' }} value={natFilter} onChange={e => { setNatFilter(e.target.value); setPage(0); }}> 
-                                <option value="all">All nationalities</option> 
-                                <option>Japanese</option><option>Russian</option><option>German</option><option>American</option> <option>Chinese</option><option>French</option> 
-                            </select> 
-                            <button className={`ac-btn ${vipFilter?'ac-btn-primary':''}`} onClick={() => { setVipFilter(!vipFilter); setPage(0); }}>VIP</button> 
-                        </div> 
-                        {humanRank && <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>Your {mode === 'xp' ? 'XP' : 'RP'} rank: <strong style={{ color: mode==='xp'?S.lavender:S.gold }}>#{humanRank}</strong> of 1,000</div>} 
-                        <Card style={{ padding: 0, overflow:'hidden' }}> 
-                            <div style={{ maxHeight: 600, overflowY:'auto' }}> 
-                                {visible.length === 0 ? <div style={{ padding: 24, textAlign:'center', color: S.muted }}>No results.</div> : visible.map(r => { 
-                                    const isHuman = r.id === 'human'; 
-                                    const prof = getProfile(r.id, catalog, state);
-                                    return ( 
-                                        <div key={r.id} style={{ display:'grid', gridTemplateColumns:'50px 1fr auto auto', gap: 12, alignItems:'center', padding:'10px 16px', borderBottom:`1px solid ${S.border}`, background: isHuman ? 'rgba(168,230,207,0.08)' : 'transparent' }}> 
-                                            <div style={{ fontSize: 13, color: S.muted, fontWeight: 700 }}>#{r.rank}</div> 
-                                            <div> 
-                                                <div style={{ display:'flex', gap: 6, alignItems:'center', flexWrap:'wrap' }}> 
-                                                    <span style={{ fontWeight: isHuman ? 800 : 600, color: isHuman ? S.mint : S.text, fontSize: 13, cursor:'pointer' }} onClick={() => onOpenProfile(r.id)}>{prof.name}</span> 
-                                                    {r.vip && <VIPBadge small />} {isHuman && <YouBadge small />} 
-                                                </div> 
-                                                <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>@{r.username} · {r.nationality}</div> 
-                                            </div> 
-                                            <div style={{ fontSize: 11, color: mode==='xp'?S.lavender:S.gold, fontWeight: 700, textAlign:'right' }}> {mode === 'xp' ? r.title : r.tier} </div> 
-                                            <div style={{ fontSize: 13, fontWeight: 700, textAlign:'right', color: mode==='xp'?S.lavender:S.gold }}> {mode === 'xp' ? fmtShort(r.xp) : `${fmtRp(r.rp)} RP`} </div> 
-                                        </div> 
-                                    ); 
-                                })} 
-                            </div> 
-                        </Card> 
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop: 12 }}> 
-                            <button className="ac-btn" disabled={safePage === 0} onClick={() => setPage(p => Math.max(0, p-1))}>← Prev</button> 
-                            <div style={{ fontSize: 12, color: S.muted }}>Page {safePage + 1} / {totalPages || 1}</div> 
-                            <button className="ac-btn" disabled={safePage >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button> 
-                        </div> 
-                    </Section> 
-                </div> 
-            ); 
-        } 
+        function LeaderboardTab({ state, catalog, lbXP, lbRP, lbRPByCat, onOpenProfile }) {
+            const [mode, setMode] = useState('rp'); const [rpCat, setRpCat] = useState(state.human.rankedCategory || 'assignments'); const [search, setSearch] = useState(''); const [natFilter, setNatFilter] = useState('all'); const [vipFilter, setVipFilter] = useState(false); const [page, setPage] = useState(0);
+            const pageSize = 50;
+            // XP uses the global XP leaderboard; each RP ladder uses its own per-category board.
+            const lb = mode === 'xp' ? lbXP : ((lbRPByCat && lbRPByCat[rpCat]) || lbRP);
+            const catMeta = RANKED_CAT_BY_ID[rpCat] || RANKED_CATEGORIES[0];
+            const catColor = catMeta.color;
+            const filtered = useMemo(() => {
+                let rows = lb;
+                if (search.trim()) {
+                    const s = search.trim().toLowerCase();
+                    rows = rows.filter(r => r.name.toLowerCase().includes(s) || r.username.toLowerCase().includes(s));
+                }
+                if (natFilter !== 'all') rows = rows.filter(r => r.nationality === natFilter);
+                if (vipFilter) rows = rows.filter(r => r.vip);
+                return rows;
+            }, [lb, search, natFilter, vipFilter]);
+            const totalPages = Math.ceil(filtered.length / pageSize); const safePage = Math.min(page, Math.max(0, totalPages - 1));
+            const visible = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
+            const humanRank = lb.find(r => r.id === 'human')?.rank;
 
-        // ============================================================ // TITLES & TIERS TAB // ============================================================ 
-        function TitlesTab({ state, lbRP }) { 
-            const h = state.human, [sub, setSub] = useState('titles'); 
-            const ti = computeTitleIdx(h.xp), cur = lbRP.find(r => r.id === 'human')?.tier || 'LT4', best = TIER_ORDER.indexOf(h.highestTier); 
-            const rwText = rw => { const c = {}; (rw.potions || []).forEach(p => c[p] = (c[p] || 0) + 1); const out = []; if (rw.eggs) out.push('🥚 ' + rw.eggs + (rw.eggs > 1 ? ' eggs' : ' egg')); Object.entries(c).forEach(([k, v]) => out.push(v + '× ' + POTIONS[k].emoji + ' ' + POTIONS[k].name)); return out.join(' · ') || 'No reward (starting tier)'; }; 
+            return (
+                <div className="ac-fade">
+                    <Section title="Leaderboards — Season RISE" sub="Three independent ranked ladders + lifetime XP. Each ladder has its own #1.">
+                        <div style={{ display:'flex', gap: 8, marginBottom: 10, flexWrap:'wrap' }}>
+                            <button className={`ac-tab ${mode==='rp'?'active':''}`} onClick={() => { setMode('rp'); setPage(0); }}>⚔️ Ranked Points</button>
+                            <button className={`ac-tab ${mode==='xp'?'active':''}`} onClick={() => { setMode('xp'); setPage(0); }}>📈 Experience (XP)</button>
+                        </div>
+                        {mode === 'rp' && (
+                            <div style={{ display:'flex', gap: 8, marginBottom: 14, flexWrap:'wrap' }}>
+                                {RANKED_CATEGORIES.map(c => (
+                                    <button key={c.id} className={`ac-tab ${rpCat===c.id?'active':''}`} style={{ color: rpCat===c.id ? c.color : undefined, borderColor: rpCat===c.id ? c.color : undefined }} onClick={() => { setRpCat(c.id); setPage(0); }}>
+                                        {c.icon} {c.name} RP
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap: 8, marginBottom: 14 }}>
+                            <input className="ac-input" placeholder="Search name or username..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} />
+                            <select className="ac-input" style={{ width:'auto' }} value={natFilter} onChange={e => { setNatFilter(e.target.value); setPage(0); }}>
+                                <option value="all">All nationalities</option>
+                                <option>Japanese</option><option>Russian</option><option>German</option><option>American</option> <option>Chinese</option><option>French</option>
+                            </select>
+                            <button className={`ac-btn ${vipFilter?'ac-btn-primary':''}`} onClick={() => { setVipFilter(!vipFilter); setPage(0); }}>VIP</button>
+                        </div>
+                        {humanRank && <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>Your {mode === 'xp' ? 'XP' : `${catMeta.name} RP`} rank: <strong style={{ color: mode==='xp'?S.lavender:catColor }}>#{humanRank}</strong> of 1,000</div>}
+                        <Card style={{ padding: 0, overflow:'hidden' }}>
+                            <div style={{ maxHeight: 600, overflowY:'auto' }}>
+                                {visible.length === 0 ? <div style={{ padding: 24, textAlign:'center', color: S.muted }}>No results.</div> : visible.map(r => {
+                                    const isHuman = r.id === 'human';
+                                    const prof = getProfile(r.id, catalog, state);
+                                    return (
+                                        <div key={r.id} style={{ display:'grid', gridTemplateColumns:'50px 1fr auto auto', gap: 12, alignItems:'center', padding:'10px 16px', borderBottom:`1px solid ${S.border}`, background: isHuman ? 'rgba(168,230,207,0.08)' : 'transparent' }}>
+                                            <div style={{ fontSize: 13, color: S.muted, fontWeight: 700 }}>#{r.rank}</div>
+                                            <div>
+                                                <div style={{ display:'flex', gap: 6, alignItems:'center', flexWrap:'wrap' }}>
+                                                    <span style={{ fontWeight: isHuman ? 800 : 600, color: isHuman ? S.mint : S.text, fontSize: 13, cursor:'pointer' }} onClick={() => onOpenProfile(r.id)}>{prof.name}</span>
+                                                    {r.vip && <VIPBadge small />} {isHuman && <YouBadge small />}
+                                                </div>
+                                                <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>@{r.username} · {r.nationality}</div>
+                                            </div>
+                                            <div style={{ fontSize: 11, color: mode==='xp'?S.lavender:catColor, fontWeight: 700, textAlign:'right' }}> {mode === 'xp' ? r.title : r.tier} </div>
+                                            <div style={{ fontSize: 13, fontWeight: 700, textAlign:'right', color: mode==='xp'?S.lavender:catColor }}> {mode === 'xp' ? fmtShort(r.xp) : `${fmtRp(r.rp)} RP`} </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop: 12 }}>
+                            <button className="ac-btn" disabled={safePage === 0} onClick={() => setPage(p => Math.max(0, p-1))}>← Prev</button>
+                            <div style={{ fontSize: 12, color: S.muted }}>Page {safePage + 1} / {totalPages || 1}</div>
+                            <button className="ac-btn" disabled={safePage >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
+                        </div>
+                    </Section>
+                </div>
+            );
+        }
+
+        // ============================================================ // TITLES & TIERS TAB // ============================================================
+        function TitlesTab({ state, lbRP, lbRPByCat }) {
+            const h = state.human, [sub, setSub] = useState('titles');
+            const selCat = h.rankedCategory || 'assignments';
+            const lbCat = (lbRPByCat && lbRPByCat[selCat]) || lbRP;
+            const ti = computeTitleIdx(h.xp), cur = lbCat.find(r => r.id === 'human')?.tier || 'LT4', best = TIER_ORDER.indexOf(h.highestTier);
+            const rwText = rw => { const c = {}; (rw.potions || []).forEach(p => c[p] = (c[p] || 0) + 1); const out = []; if (rw.eggs) out.push('🥚 ' + rw.eggs + (rw.eggs > 1 ? ' eggs' : ' egg')); Object.entries(c).forEach(([k, v]) => out.push(v + '× ' + POTIONS[k].emoji + ' ' + POTIONS[k].name)); return out.join(' · ') || 'No reward (starting tier)'; };
             return ( 
                 <div className="ac-fade"> 
                     <Section title="Titles & Tiers" sub="Titles come from lifetime XP, tiers from your RP rank. Rewards are granted the first time you reach each one."> 
@@ -1508,7 +1861,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                 <div>🥚 <strong>{h.inventory.eggs}</strong> Eggs</div> 
                                 <div>🐾 <strong>{h.inventory.pets.length}</strong> Pets</div> 
                                 <div>🧪 <strong>{h.inventory.potions.reduce((s,p)=>s+p.quantity,0)}</strong> Potions</div> 
-                                <div>⚔️ <strong>{fmtRp(h.rp)}</strong> RP Available</div> 
+                                <div>🪙 <strong>{fmtInt(h.rp || 0)}</strong> Coins (earn from ranked)</div>
                             </div> 
                         </Card> 
                         {activePot && ( 
@@ -1533,43 +1886,51 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                 </div> 
                             )} 
                         </Section> 
-                        <Section title="Potion Market" sub="Spend Ranked Points (RP) to acquire advanced elixirs"> 
-                            <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))' }}> 
-                                {Object.entries(POTIONS).map(([type, def]) => ( 
-                                    <Card key={type}> 
-                                        <div style={{ fontSize: 32, marginBottom: 4 }}>{def.emoji}</div> 
-                                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{def.name}</div> 
-                                        <div style={{ fontSize: 12, color: S.muted, marginBottom: 12, minHeight: 36 }}>{def.desc}</div> 
-                                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}> 
-                                            <span style={{ color: S.gold, fontWeight: 700 }}>{def.cost} RP</span> 
-                                            <button className="ac-btn ac-btn-primary" style={{ padding:'6px 14px', fontSize: 12 }} disabled={h.rp < def.cost} onClick={() => { onBuyPotion(type); toast(`Purchased ${def.name}!`); }}>Purchase</button> 
-                                        </div> 
-                                    </Card> 
-                                ))} 
-                            </div> 
-                        </Section> 
+                        <Section title="Potion Market" sub="Spend coins (earned from ranked play) to acquire advanced elixirs">
+                            <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))' }}>
+                                {Object.entries(POTIONS).map(([type, def]) => (
+                                    <Card key={type}>
+                                        <div style={{ fontSize: 32, marginBottom: 4 }}>{def.emoji}</div>
+                                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{def.name}</div>
+                                        <div style={{ fontSize: 12, color: S.muted, marginBottom: 12, minHeight: 36 }}>{def.desc}</div>
+                                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                            <span style={{ color: S.gold, fontWeight: 700 }}>{def.cost} 🪙</span>
+                                            <button className="ac-btn ac-btn-primary" style={{ padding:'6px 14px', fontSize: 12 }} disabled={(h.rp || 0) < def.cost} onClick={() => { onBuyPotion(type); toast(`Purchased ${def.name}!`); }}>Purchase</button>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        </Section>
                     </Section> 
                 </div> 
             ); 
         } 
 
-        // ============================================================ // UNIVERSAL PROFILE MODAL // ============================================================ 
-        function ProfileModal({ playerId, state, catalog, lbXP, lbRP, onClose, onSaveProfile }) { 
-            const isHuman = playerId === 'human'; 
-            const baseProfile = getProfile(playerId, catalog, state); 
-            const [name, setName] = useState(baseProfile.name); 
-            const [username, setUsername] = useState(baseProfile.username); 
-            const [bio, setBio] = useState(baseProfile.bio || ''); 
-            const [motto, setMotto] = useState(baseProfile.motto || ''); 
-            const [avatar, setAvatar] = useState(baseProfile.avatar || '🦊'); 
-            
-            const xp = isHuman ? state.human.xp : (state.ai[playerId]?.xp || 0); 
-            const rp = isHuman ? state.human.rp : (state.ai[playerId]?.rp || 0); 
-            const titleIdx = computeTitleIdx(xp); 
-            
-            const xpRank = lbXP.find(r => r.id === playerId)?.rank || '?'; 
-            const rpRank = lbRP.find(r => r.id === playerId)?.rank || '?'; 
-            const tier = computeTierForRank(rpRank); 
+        // ============================================================ // UNIVERSAL PROFILE MODAL // ============================================================
+        function ProfileModal({ playerId, state, catalog, lbXP, lbRP, lbRPByCat, onClose, onSaveProfile }) {
+            const isHuman = playerId === 'human';
+            const baseProfile = getProfile(playerId, catalog, state);
+            const [name, setName] = useState(baseProfile.name);
+            const [username, setUsername] = useState(baseProfile.username);
+            const [bio, setBio] = useState(baseProfile.bio || '');
+            const [motto, setMotto] = useState(baseProfile.motto || '');
+            const [avatar, setAvatar] = useState(baseProfile.avatar || '🦊');
+
+            const xp = isHuman ? state.human.xp : (state.ai[playerId]?.xp || 0);
+            const titleIdx = computeTitleIdx(xp);
+
+            const xpRank = lbXP.find(r => r.id === playerId)?.rank || '?';
+            // Per-category RP + rank. Default to the human's selected category for the headline tier.
+            const selCat = (isHuman ? state.human.rankedCategory : 'assignments') || 'assignments';
+            const catRp = {};
+            const catRank = {};
+            for (const c of RANKED_CATEGORIES) {
+                catRp[c.id] = getCatRp(state, playerId, c.id);
+                catRank[c.id] = (lbRPByCat && lbRPByCat[c.id]) ? (lbRPByCat[c.id].find(r => r.id === playerId)?.rank || '?') : '?';
+            }
+            const rp = catRp[selCat];
+            const rpRank = catRank[selCat];
+            const tier = computeTierForRank(typeof rpRank === 'number' ? rpRank : 1000); 
 
             const save = () => {
                 if (!name.trim() || !username.trim()) return;
@@ -1608,7 +1969,16 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                         </div> 
                         <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr', marginBottom: 16 }}> 
                             <Card><div style={{ fontSize: 11, color: S.muted }}>XP & RANK</div><div style={{ fontSize: 16, fontWeight: 700, color: S.lavender }}>{fmtInt(xp)} <span style={{ fontSize: 12, color: S.muted }}>(#{xpRank})</span></div><div style={{ fontSize: 11, color: S.gold, marginTop: 2 }}>{TITLES[titleIdx]}</div></Card> 
-                            <Card><div style={{ fontSize: 11, color: S.muted }}>RP & RANK</div><div style={{ fontSize: 16, fontWeight: 700, color: S.gold }}>{fmtRp(rp)} RP <span style={{ fontSize: 12, color: S.muted }}>(#{rpRank})</span></div><div style={{ fontSize: 11, color: S.mint, marginTop: 2 }}>Tier {tier}</div></Card> 
+                            <Card>
+                                <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>RANKED LADDERS</div>
+                                {RANKED_CATEGORIES.map(c => (
+                                    <div key={c.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'4px 0', borderBottom: `1px solid ${S.border}`, fontSize: 12 }}>
+                                        <span style={{ color: c.color, fontWeight: 700 }}>{c.icon} {c.name}</span>
+                                        <span style={{ color: S.gold, fontWeight: 700 }}>{fmtRp(catRp[c.id])} RP <span style={{ color: S.muted, fontSize: 11 }}>#{catRank[c.id]}</span></span>
+                                    </div>
+                                ))}
+                                <div style={{ fontSize: 11, color: S.mint, marginTop: 6 }}>Tier {tier} · ({(RANKED_CAT_BY_ID[selCat]||{}).name || selCat})</div>
+                            </Card>
                         </div> 
                         <Card style={{ marginBottom: 16 }}> 
                             <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>SPECIALIZATION</div> 
@@ -1768,10 +2138,10 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                 return xp; 
             }, [update, toastMsg]); 
 
-            const handleStartMatch = useCallback((mode) => { 
-                let ok = false; 
-                update(s => { ok = startRankedBattle(s, catalogRef.current, mode); }); 
-                return ok; 
+            const handleStartMatch = useCallback((mode, category) => {
+                let ok = false;
+                update(s => { ok = startRankedBattle(s, catalogRef.current, mode, category); });
+                return ok;
             }, [update]); 
 
             const handleHatch = useCallback(() => { let pet = null; update(s => { pet = hatchEgg(s); }); return pet; }, [update]); 
@@ -1862,10 +2232,22 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                 reader.readAsText(file); 
             }, [bump, toastMsg]); 
 
-            const catalog = catalogRef.current; 
-            const state = stateRef.current; 
-            const lbXP = useMemo(() => state ? buildXPLeaderboard(state, catalog) : [], [state?.human.xp, state?.ai, lbTick, catalog, state?.profiles]); 
-            const lbRP = useMemo(() => state ? buildRPLeaderboard(state, catalog) : [], [state?.human.rp, state?.ai, lbTick, catalog, state?.profiles]); 
+            const catalog = catalogRef.current;
+            const state = stateRef.current;
+            const lbXP = useMemo(() => state ? buildXPLeaderboard(state, catalog) : [], [state?.human.xp, state?.ai, lbTick, catalog, state?.profiles]);
+            const lbRP = useMemo(() => state ? buildRPLeaderboard(state, catalog) : [], [state?.human.rp, state?.ai, lbTick, catalog, state?.profiles]);
+            // Per-category ranked leaderboards (independent ladders → independent #1s).
+            const lbRPByCat = useMemo(() => {
+                if (!state) return {};
+                const out = {};
+                for (const c of RANKED_CATEGORIES) out[c.id] = buildRPLeaderboard(state, catalog, c.id);
+                return out;
+            }, [state?.human.rpByCat, state?.ai, lbTick, catalog, state?.profiles]);
+
+            // Allow the Ranked tab to switch which ladder the human queues into.
+            const handleSetRankedCategory = useCallback((cat) => {
+                update(s => { if (RANKED_CAT_BY_ID[cat] && !s.human.activeMatch) s.human.rankedCategory = cat; });
+            }, [update]);
             
             if (!loaded || !catalog || !state) { 
                 return <div style={{ padding: 40, textAlign:'center', color: S.muted }}>Loading Academia: Season RISE...</div>; 
@@ -1880,13 +2262,14 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                 <div style={{ fontSize: 22, fontWeight: 800, letterSpacing:'-0.5px', background: `linear-gradient(135deg, ${S.lavender}, ${S.pink}, ${S.gold})`, backgroundSize:'200% auto', animation:'shimmer 6s linear infinite', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>ACADEMIA</div> 
                                 <span style={{ fontSize: 10, fontWeight: 800, color: S.pink, border: `1px solid ${S.pink}66`, padding: '2px 6px', borderRadius: 4 }}>SEASON RISE</span>
                             </div> 
-                            <div style={{ display:'flex', gap: 12, alignItems:'center', fontSize: 12, flexWrap:'wrap' }}> 
-                                <div><span style={{ color: S.muted }}>XP:</span> <strong style={{ color: S.lavender }}>{fmtInt(state.human.xp)}</strong></div> 
-                                <div><span style={{ color: S.muted }}>RP:</span> <strong style={{ color: S.gold }}>{fmtRp(state.human.rp)}</strong></div> 
-                                <div><span style={{ color: S.muted }}>Combo:</span> <strong style={{ color: S.pink }}>{state.human.combo}×</strong></div> 
-                                <button className="ac-btn ac-btn-primary" style={{ padding:'8px 14px', fontSize: 12 }} onClick={() => setSaveModal(true)}> 💾 Save </button> 
-                                <button className="ac-btn" style={{ padding:'8px 12px', fontSize: 12 }} onClick={() => { FX.muted = !FX.muted; try { localStorage.setItem('academia_mute', FX.muted ? '1' : '0'); } catch (e) {} bump(); }}>{FX.muted ? '🔇' : '🔊'}</button> 
-                            </div> 
+                            <div style={{ display:'flex', gap: 12, alignItems:'center', fontSize: 12, flexWrap:'wrap' }}>
+                                <div><span style={{ color: S.muted }}>XP:</span> <strong style={{ color: S.lavender }}>{fmtInt(state.human.xp)}</strong></div>
+                                <div title={`${(RANKED_CAT_BY_ID[state.human.rankedCategory]||{}).name || ''} ladder rating`}><span style={{ color: S.muted }}>{(RANKED_CAT_BY_ID[state.human.rankedCategory]||{}).icon || '⚔️'} RP:</span> <strong style={{ color: (RANKED_CAT_BY_ID[state.human.rankedCategory]||{}).color || S.gold }}>{fmtRp(getCatRp(state, 'human', state.human.rankedCategory || 'assignments'))}</strong></div>
+                                <div title="Spendable coins from ranked play (used in the shop)"><span style={{ color: S.muted }}>🪙 Coins:</span> <strong style={{ color: S.gold }}>{fmtInt(state.human.rp || 0)}</strong></div>
+                                <div><span style={{ color: S.muted }}>Combo:</span> <strong style={{ color: S.pink }}>{state.human.combo}×</strong></div>
+                                <button className="ac-btn ac-btn-primary" style={{ padding:'8px 14px', fontSize: 12 }} onClick={() => setSaveModal(true)}> 💾 Save </button>
+                                <button className="ac-btn" style={{ padding:'8px 12px', fontSize: 12 }} onClick={() => { FX.muted = !FX.muted; try { localStorage.setItem('academia_mute', FX.muted ? '1' : '0'); } catch (e) {} bump(); }}>{FX.muted ? '🔇' : '🔊'}</button>
+                            </div>
                         </div> 
                     </div> 
                     <div style={{ background: S.bg, borderBottom: `1px solid ${S.border}`, position:'sticky', top: 56, zIndex: 99 }}> 
@@ -1899,23 +2282,23 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                         </div> 
                     </div> 
                     <div style={{ maxWidth: 1200, margin:'0 auto', padding:'20px 16px 60px', position:'relative', zIndex:1 }}> 
-                        {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onNav={setTab} onOpenProfile={setProfileModalId} />} 
-                        {tab === 'ranked' && <RankedTab state={state} catalog={catalog} lbRP={lbRP} onStartMatch={handleStartMatch} toast={toastMsg} onOpenProfile={setProfileModalId} />} 
+                        {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} lbRPByCat={lbRPByCat} onNav={setTab} onOpenProfile={setProfileModalId} />}
+                        {tab === 'ranked' && <RankedTab state={state} catalog={catalog} lbRP={lbRP} lbRPByCat={lbRPByCat} onStartMatch={handleStartMatch} onSetCategory={handleSetRankedCategory} toast={toastMsg} onOpenProfile={setProfileModalId} />}
                         {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'othertasks' && <OtherTasksTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
-                        {tab === 'ranks' && <TitlesTab state={state} lbRP={lbRP} />} 
+                        {tab === 'ranks' && <TitlesTab state={state} lbRP={lbRP} lbRPByCat={lbRPByCat} />}
                         {tab === 'quests' && <QuestsTab state={state} onClaim={handleClaim} toast={toastMsg} />} 
-                        {tab === 'leaderboards' && <LeaderboardTab state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onOpenProfile={setProfileModalId} />} 
+                        {tab === 'leaderboards' && <LeaderboardTab state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} lbRPByCat={lbRPByCat} onOpenProfile={setProfileModalId} />}
                         {tab === 'pets' && <PetsTab state={state} onHatch={handleHatch} onEquip={handleEquip} toast={toastMsg} />} 
                         {tab === 'inventory' && <InventoryTab state={state} onUsePotion={handleUsePotion} onBuyPotion={handleBuyPotion} toast={toastMsg} />} 
-                        {tab === 'profile' && <ProfileModal playerId="human" state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onClose={() => {}} onSaveProfile={handleSaveProfile} />} 
+                        {tab === 'profile' && <ProfileModal playerId="human" state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} lbRPByCat={lbRPByCat} onClose={() => {}} onSaveProfile={handleSaveProfile} />}
                         {tab === 'history' && <HistoryTab state={state} />} 
                     </div> 
                     {saveModal && <SaveModal state={state} onExport={handleExport} onImport={handleImport} onClose={() => setSaveModal(false)} toast={toastMsg} />}
                     {welcomeBack !== null && <WelcomeBack elapsedMs={welcomeBack} onClose={() => setWelcomeBack(null)} />} 
-                    {profileModalId !== null && <ProfileModal playerId={profileModalId} state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} onClose={() => setProfileModalId(null)} onSaveProfile={handleSaveProfile} />} 
+                    {profileModalId !== null && <ProfileModal playerId={profileModalId} state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} lbRPByCat={lbRPByCat} onClose={() => setProfileModalId(null)} onSaveProfile={handleSaveProfile} />}
                     <Toast msg={toast} onDone={() => setToast(null)} /> 
                 </div> 
             ); 
