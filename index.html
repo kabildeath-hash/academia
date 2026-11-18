@@ -333,6 +333,20 @@
         const SAVE_KEY = 'academia_rise_v1'; 
         const STATE_VERSION = 5;
         
+        // ============================================================ // STUDYING TOOLS DATA // ============================================================ 
+        // Personal study utilities (definitions library, rough scratchpad, homework
+        // planner). Stored under human.studyTools so they persist with the normal
+        // save system (localStorage autosave + exported academia.json).
+        const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        function defaultStudyTools() {
+            return {
+                defs: { folders: [], defs: [], lastFolderId: null },   // folders: [{id,name,parentId,createdAt}] (parentId null = top level)
+                rough: { text: '', updatedAt: 0 },                     // scratchpad, autosaved while typing
+                homeworks: [],                                          // [{id,title,subject,due,priority,notes,done,createdAt,completedAt}]
+                lastTool: 'defs'
+            };
+        }
+
         function initHumanState() {
             const now = Date.now();
             // Per-category ranked rating. Each ladder starts fresh (reset to 0 → startRp via initState).
@@ -361,6 +375,7 @@
                 weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, rankedWins: 0 },
                 careerHistory: [], highestTitle: 0, highestTier: 'LT4', tierHistory: [], dailyXpLog: {},
                 customization: { frame:'default', color:'#c4b5fd', badge:'⭐', avatar:'🦊', motto:'Focus & Discipline', bio:'Aiming for the top.' },
+                studyTools: defaultStudyTools(),
                 lastSave: now, lastTick: now
             };
         }
@@ -415,6 +430,9 @@
                 if (!s.human.rankedDrawsByCat) { s.human.rankedDrawsByCat = {}; RANKED_CATEGORIES.forEach(c => s.human.rankedDrawsByCat[c.id] = 0); }
                 if (!s.human.oppHistoryByCat) { s.human.oppHistoryByCat = {}; RANKED_CATEGORIES.forEach(c => s.human.oppHistoryByCat[c.id] = {}); }
                 if (s.human.activeMatch && !s.human.activeMatch.category) s.human.activeMatch.category = s.human.rankedCategory || 'assignments';
+                // Backfill studying-tools data for saves that predate the feature.
+                if (!s.human.studyTools) s.human.studyTools = defaultStudyTools();
+                else s.human.studyTools = { ...defaultStudyTools(), ...s.human.studyTools };
                 // Backfill AI per-category + personality fields.
                 for (const id of Object.keys(s.ai || {})) {
                     const a = s.ai[id];
@@ -1342,7 +1360,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>EQUIPPED PET</div> {equippedPet ? ( <div style={{ display:'flex', alignItems:'center', gap: 12 }}> <div className="ac-float" style={{ fontSize: 40 }}>{equippedPet.emoji}</div> <div> <div style={{ fontWeight: 700, fontSize: 15 }}>{equippedPet.petName}</div> <div style={{ fontSize: 11, marginTop: 2 }}><RarityPill rarity={equippedPet.rarity} /></div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Lv. {equippedPet.level} · +{(equippedPet.val * (1+0.05*(equippedPet.level-1))*100).toFixed(1)}% XP</div> </div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No pet equipped.</div>} </Card> 
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>ACTIVE POTION</div> {activePot ? ( <div> <div style={{ fontSize: 14, fontWeight: 700 }}>{POTIONS[activePot.type].emoji} {POTIONS[activePot.type].name}</div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Expires in {fmtTime(activePot.expires - Date.now())}</div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No active potion.</div>} </Card> 
                     </div> 
-                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('ranked')}>⚔️ Ranked Battle</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('othertasks')}>🧹 Other Tasks</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
+                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('ranked')}>⚔️ Ranked Battle</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studytools')}>🧰 Studying Tools</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('othertasks')}>🧹 Other Tasks</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
                 </div> 
             ); 
         } 
@@ -1545,7 +1563,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
         // ============================================================ // ASSIGNMENTS, STUDYING, OTHER TASKS, MOCK TESTS // ============================================================ 
         function AssignmentsTab({ state, onComplete, toast }) { const [activeTask, setActiveTask] = useState(null); const h = state.human; const confirm = () => { if (!activeTask) return; const xp = onComplete('assignment', activeTask.id, activeTask.xp); toast(`+${xp} XP · ${activeTask.name}`); setActiveTask(null); }; return ( <div className="ac-fade"> <Section title="Assignments" sub="Complete academic tasks to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}> {ASSIGNMENT_TASKS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>{t.icon}</div> <span className="ac-pill" style={{ background: S.lavender+'22', color: S.lavender }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActiveTask(t)}>Complete</button> </Card> ))} </div> </Section> {activeTask && ( <div className="ac-modal-bg" onClick={() => setActiveTask(null)}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ textAlign:'center', marginBottom: 20 }}> <div style={{ fontSize: 48, marginBottom: 12 }}>{activeTask.icon}</div> <div style={{ fontSize: 20, fontWeight: 700 }}>{activeTask.name}</div> <div style={{ fontSize: 13, color: S.muted, marginTop: 4 }}>{activeTask.desc}</div> </div> <div style={{ fontSize: 13, color: S.muted, textAlign:'center', marginBottom: 20 }}> Confirm you have completed this task. Reward: <strong style={{ color: S.lavender }}>+{calcTaskXp(activeTask.xp, h, 'assignment')} XP</strong> </div> <div style={{ display:'flex', gap: 10 }}> <button className="ac-btn" style={{ flex: 1 }} onClick={() => setActiveTask(null)}>Cancel</button> <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} onClick={confirm}>Confirm</button> </div> </div> </div> )} </div> ); } 
 
-        function StudyingTab({ state, onComplete, toast }) { const h = state.human; const [active, setActive] = useState(null); const [stage, setStage] = useState(0); const [question, setQuestion] = useState(null); const [answer, setAnswer] = useState(null); const start = (task) => { const rng = mulberry32(Math.floor(Math.random()*1e9)); let content; if (task.id === 'recall_page') { const p = pick(rng, RECALL_PASSAGES); content = { type:'passage', passage: p.passage, q: p.q, opts: p.opts, a: p.a }; } else if (task.id === 'recall_problem') { const p = pick(rng, NUM_PROBLEMS); content = { type:'problem', q: p.q, opts: p.opts, a: p.a }; } else { const defs = shuffle(DEF_SET, rng).slice(0, 5); const target = defs[0]; const wrong = shuffle(DEF_SET.filter(d=>d.term!==target.term), rng).slice(0,3).map(d=>d.term); const opts = shuffle([target.term, ...wrong], rng); content = { type:'defs', defs, q: `Which term matches: "${target.def}"?`, opts, a: opts.indexOf(target.term) }; } setActive(task); setQuestion(content); setStage(0); setAnswer(null); }; const submit = () => setStage(2); const claim = () => { if (!active || !question) return; const correct = answer === question.a; if (correct) { const xp = onComplete('study', active.id, active.xp); toast(`+${xp} XP · ${active.name}`); } else toast('Not quite — try again next time.'); setActive(null); setQuestion(null); setStage(0); setAnswer(null); }; return ( <div className="ac-fade"> <Section title="Studying & Recall" sub="Answer correctly to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}> {STUDY_TASKS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>{t.icon}</div> <span className="ac-pill" style={{ background: S.pink+'22', color: S.pink }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin</button> </Card> ))} </div> </Section> {active && question && ( <div className="ac-modal-bg" onClick={() => { if (stage === 0) { setActive(null); setQuestion(null); } }}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{active.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 16 }}>Reward: +{calcTaskXp(active.xp, h, 'study')} XP (requires correct answer)</div> {stage === 0 && ( <div> {question.type === 'passage' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>{question.passage}</div>} {question.type === 'defs' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>{question.defs.map((d, i) => <div key={i} style={{ marginBottom: 4 }}><strong>{d.term}:</strong> {d.def}</div>)}</div>} <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{question.q}</div> {question.opts.map((opt, i) => ( <button key={i} className="ac-btn" style={{ width:'100%', marginBottom: 6, textAlign:'left', background: answer===i?S.lavender+'22':S.panel2, borderColor: answer===i?S.lavender:S.border }} onClick={() => setAnswer(i)}> {String.fromCharCode(65+i)}. {opt} </button> ))} <div style={{ marginTop: 14 }}><button className="ac-btn ac-btn-primary" style={{ width: '100%' }} disabled={answer === null} onClick={submit}>Submit</button></div> </div> )} {stage === 2 && ( <div> <div style={{ textAlign:'center', padding: 20 }}> <div style={{ fontSize: 40, marginBottom: 8 }}>{answer === question.a ? '✅' : '❌'}</div> <div style={{ fontSize: 16, fontWeight: 700, color: answer === question.a ? S.success : S.danger }}>{answer === question.a ? 'Correct!' : 'Incorrect'}</div> {answer !== question.a && <div style={{ fontSize: 13, color: S.muted, marginTop: 8 }}>Answer: <strong>{question.opts[question.a]}</strong></div>} </div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={claim}>{answer === question.a ? 'Claim Reward' : 'Close'}</button> </div> )} </div> </div> )} </div> ); } 
+        function StudyingTab({ state, onComplete, toast }) { const h = state.human; const [active, setActive] = useState(null); const [stage, setStage] = useState(0); const [question, setQuestion] = useState(null); const [answer, setAnswer] = useState(null); const start = (task) => { const rng = mulberry32(Math.floor(Math.random()*1e9)); let content; if (task.id === 'recall_page') { const p = pick(rng, RECALL_PASSAGES); content = { type:'passage', passage: p.passage, q: p.q, opts: p.opts, a: p.a }; } else if (task.id === 'recall_problem') { const p = pick(rng, NUM_PROBLEMS); content = { type:'problem', q: p.q, opts: p.opts, a: p.a }; } else { const seenU = {}; const userDefs = ((state.human.studyTools && state.human.studyTools.defs && state.human.studyTools.defs.defs) || []).filter(d => { const k = (d.headWord || '').trim().toLowerCase(); if (!k || seenU[k]) return false; seenU[k] = 1; return true; }).map(d => ({ term: d.headWord, def: d.body })); const pool = userDefs.length >= 4 ? userDefs : DEF_SET; const defs = shuffle(pool, rng).slice(0, 5); const target = defs[0]; const wrong = shuffle(pool.filter(d=>d.term!==target.term), rng).slice(0,3).map(d=>d.term); const opts = shuffle([target.term, ...wrong], rng); content = { type:'defs', defs, q: `Which term matches: "${target.def}"?`, opts, a: opts.indexOf(target.term), fromUser: userDefs.length >= 4 }; } setActive(task); setQuestion(content); setStage(0); setAnswer(null); }; const submit = () => setStage(2); const claim = () => { if (!active || !question) return; const correct = answer === question.a; if (correct) { const xp = onComplete('study', active.id, active.xp); toast(`+${xp} XP · ${active.name}`); } else toast('Not quite — try again next time.'); setActive(null); setQuestion(null); setStage(0); setAnswer(null); }; return ( <div className="ac-fade"> <Section title="Studying & Recall" sub="Answer correctly to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}> {STUDY_TASKS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>{t.icon}</div> <span className="ac-pill" style={{ background: S.pink+'22', color: S.pink }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin</button> </Card> ))} </div> </Section> {active && question && ( <div className="ac-modal-bg" onClick={() => { if (stage === 0) { setActive(null); setQuestion(null); } }}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{active.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>Reward: +{calcTaskXp(active.xp, h, 'study')} XP (requires correct answer)</div> {question.fromUser && <div style={{ fontSize: 11, color: S.pink, marginBottom: 14 }}>📖 Quiz drawn from your own definitions (Studying Tools)</div>} {stage === 0 && ( <div> {question.type === 'passage' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>{question.passage}</div>} {question.type === 'defs' && <div style={{ background: S.bg2, border: `1px solid ${S.border}`, borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13 }}>{question.defs.map((d, i) => <div key={i} style={{ marginBottom: 4 }}><strong>{d.term}:</strong> {d.def}</div>)}</div>} <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{question.q}</div> {question.opts.map((opt, i) => ( <button key={i} className="ac-btn" style={{ width:'100%', marginBottom: 6, textAlign:'left', background: answer===i?S.lavender+'22':S.panel2, borderColor: answer===i?S.lavender:S.border }} onClick={() => setAnswer(i)}> {String.fromCharCode(65+i)}. {opt} </button> ))} <div style={{ marginTop: 14 }}><button className="ac-btn ac-btn-primary" style={{ width: '100%' }} disabled={answer === null} onClick={submit}>Submit</button></div> </div> )} {stage === 2 && ( <div> <div style={{ textAlign:'center', padding: 20 }}> <div style={{ fontSize: 40, marginBottom: 8 }}>{answer === question.a ? '✅' : '❌'}</div> <div style={{ fontSize: 16, fontWeight: 700, color: answer === question.a ? S.success : S.danger }}>{answer === question.a ? 'Correct!' : 'Incorrect'}</div> {answer !== question.a && <div style={{ fontSize: 13, color: S.muted, marginTop: 8 }}>Answer: <strong>{question.opts[question.a]}</strong></div>} </div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={claim}>{answer === question.a ? 'Claim Reward' : 'Close'}</button> </div> )} </div> </div> )} </div> ); } 
 
         function OtherTasksTab({ state, onComplete, toast }) { 
             const [activeTask, setActiveTask] = useState(null); 
@@ -2029,12 +2047,482 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
             ); 
         } 
 
+        // ============================================================ // STUDYING TOOLS // ============================================================ 
+        // Three personal study utilities that live inside the game:
+        //   📖 Definitions — nested subject folders holding head-word definitions
+        //   ✏️ Rough       — a scratchpad that saves whatever you type
+        //   📋 Homeworks   — plan homework by priority and due date
+        // All data lives in state.human.studyTools and persists with the normal
+        // save system (localStorage autosave + exported academia.json).
+
+        const HW_PRIORITIES = { high:{ label:'High', icon:'🔥', color:'#f38ba8', order:0 }, medium:{ label:'Medium', icon:'⭐', color:'#f5d78e', order:1 }, low:{ label:'Low', icon:'🌿', color:'#a8e6cf', order:2 } };
+
+        // ---- Definitions folder-tree helpers ----
+        function folderChildren(folders, parentId) { return folders.filter(f => f.parentId === parentId); } 
+        function folderDescendants(folders, id) { const out = []; const walk = pid => { folders.forEach(f => { if (f.parentId === pid) { out.push(f.id); walk(f.id); } }); }; walk(id); return out; } 
+        function folderPath(folders, id) { const byId = {}; folders.forEach(f => { byId[f.id] = f; }); const path = []; let cur = byId[id]; while (cur) { path.unshift(cur); cur = cur.parentId ? byId[cur.parentId] : null; } return path; } 
+        function foldersIndented(folders) { const out = []; const walk = (parentId, depth) => { folderChildren(folders, parentId).slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(f => { out.push({ ...f, depth }); walk(f.id, depth + 1); }); }; walk(null, 0); return out; } 
+        function countDefsRecursive(defs, folders, folderId) { const ids = [folderId].concat(folderDescendants(folders, folderId)); return defs.filter(d => ids.indexOf(d.folderId) >= 0).length; } 
+
+        // ---- Small shared pieces ----
+        function STEmpty({ icon, title, sub }) { 
+            return ( 
+                <div style={{ textAlign:'center', padding: '36px 16px', color: S.muted }}> 
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>{icon}</div> 
+                    <div style={{ fontSize: 15, fontWeight: 700, color: S.text, marginBottom: 4 }}>{title}</div> 
+                    <div style={{ fontSize: 13, lineHeight: 1.5, maxWidth: 420, margin: '0 auto' }}>{sub}</div> 
+                </div> 
+            ); 
+        } 
+
+        function STConfirmModal({ title, body, confirmLabel, onConfirm, onClose }) { 
+            return ( 
+                <div className="ac-modal-bg" onClick={onClose}> 
+                    <div className="ac-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}> 
+                        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>{title}</div> 
+                        <div style={{ fontSize: 13, color: S.muted, marginBottom: 18, lineHeight: 1.55 }}>{body}</div> 
+                        <div style={{ display:'flex', gap: 10 }}> 
+                            <button className="ac-btn" style={{ flex: 1 }} onClick={onClose}>Cancel</button> 
+                            <button className="ac-btn" style={{ flex: 1, background: S.danger+'22', borderColor: S.danger+'66', color: S.danger }} onClick={() => { onConfirm(); onClose(); }}>{confirmLabel || 'Delete'}</button> 
+                        </div> 
+                    </div> 
+                </div> 
+            ); 
+        } 
+
+        function STFolderModal({ title, initial, onSave, onClose }) { 
+            const [name, setName] = useState(initial || ''); 
+            const save = () => { const n = name.trim(); if (!n) return; onSave(n); onClose(); }; 
+            return ( 
+                <div className="ac-modal-bg" onClick={onClose}> 
+                    <div className="ac-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}> 
+                        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 14 }}>{title}</div> 
+                        <input className="ac-input" autoFocus placeholder="Folder name (e.g. Biology)" value={name} maxLength={60} onChange={e => setName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') save(); }} /> 
+                        <div style={{ display:'flex', gap: 10, marginTop: 16 }}> 
+                            <button className="ac-btn" style={{ flex: 1 }} onClick={onClose}>Cancel</button> 
+                            <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} disabled={!name.trim()} onClick={save}>Save</button> 
+                        </div> 
+                    </div> 
+                </div> 
+            ); 
+        } 
+
+        function STDefModal({ title, def, folders, defaultFolderId, onSave, onClose }) { 
+            const [head, setHead] = useState(def ? def.headWord : ''); 
+            const [body, setBody] = useState(def ? def.body : ''); 
+            const [folderId, setFolderId] = useState(def ? def.folderId : (defaultFolderId || null)); 
+            const options = [{ id: null, name: 'Root (top level)', depth: 0 }].concat(foldersIndented(folders)); 
+            const save = () => { const hd = head.trim(), bd = body.trim(); if (!hd || !bd) return; onSave({ headWord: hd, body: bd, folderId }); onClose(); }; 
+            return ( 
+                <div className="ac-modal-bg" onClick={onClose}> 
+                    <div className="ac-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}> 
+                        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 14 }}>{title}</div> 
+                        <div style={{ fontSize: 12, color: S.muted, marginBottom: 6 }}>Head word</div> 
+                        <input className="ac-input" autoFocus placeholder="The term to define (e.g. Osmosis)" value={head} maxLength={80} onChange={e => setHead(e.target.value)} /> 
+                        <div style={{ fontSize: 12, color: S.muted, margin: '12px 0 6px' }}>Definition</div> 
+                        <textarea className="ac-input" style={{ minHeight: 110, resize: 'vertical', lineHeight: 1.55 }} placeholder="Write the definition in your own words…" value={body} maxLength={2000} onChange={e => setBody(e.target.value)} /> 
+                        <div style={{ fontSize: 12, color: S.muted, margin: '12px 0 6px' }}>Store in</div> 
+                        <select className="ac-input" value={folderId || ''} onChange={e => setFolderId(e.target.value || null)}> 
+                            {options.map(f => <option key={f.id || 'root'} value={f.id || ''}>{'— '.repeat(f.depth)}📁 {f.name}</option>)} 
+                        </select> 
+                        <div style={{ display:'flex', gap: 10, marginTop: 18 }}> 
+                            <button className="ac-btn" style={{ flex: 1 }} onClick={onClose}>Cancel</button> 
+                            <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} disabled={!head.trim() || !body.trim()} onClick={save}>Save</button> 
+                        </div> 
+                    </div> 
+                </div> 
+            ); 
+        } 
+
+        function STMoveModal({ title, folders, excludeIds, currentId, onPick, onClose }) { 
+            const list = [{ id: null, name: 'Root (top level)', depth: 0 }].concat(foldersIndented(folders).filter(f => excludeIds.indexOf(f.id) < 0)); 
+            return ( 
+                <div className="ac-modal-bg" onClick={onClose}> 
+                    <div className="ac-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}> 
+                        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{title}</div> 
+                        <div style={{ fontSize: 12, color: S.muted, marginBottom: 14 }}>Pick the destination folder.</div> 
+                        <div style={{ display:'flex', flexDirection:'column', gap: 6 }}> 
+                            {list.map(f => { const on = (f.id || null) === (currentId || null); return ( 
+                                <button key={f.id || 'root'} className="ac-btn" style={{ textAlign:'left', background: on ? S.lavender+'22' : S.panel2, borderColor: on ? S.lavender : S.border, color: on ? S.lavender : S.text }} onClick={() => { onPick(f.id); onClose(); }}> 
+                                    <span style={{ paddingLeft: f.depth * 18 }}>📁 {f.name}{on ? '  · current' : ''}</span> 
+                                </button> 
+                            ); })} 
+                        </div> 
+                    </div> 
+                </div> 
+            ); 
+        } 
+        // --- ST: Definitions & Rough tools ---
+        function DefinitionsTool({ st, update, toast }) { 
+            const D = st.defs; 
+            const [cur, setCur] = useState(() => (D.lastFolderId && D.folders.some(f => f.id === D.lastFolderId)) ? D.lastFolderId : null); 
+            const [q, setQ] = useState(''); 
+            const [folderModal, setFolderModal] = useState(null);   // { title, initial, onSave }
+            const [defModal, setDefModal] = useState(null);          // { title, def, onSave }
+            const [move, setMove] = useState(null);                  // { kind, id, name, excludeIds, currentId }
+            const [del, setDel] = useState(null);                    // { kind, item }
+
+            const go = (id) => { setCur(id); setQ(''); update(s => { s.human.studyTools.defs.lastFolderId = id; }); }; 
+            const crumbs = folderPath(D.folders, cur); 
+            const subFolders = folderChildren(D.folders, cur).slice().sort((a, b) => a.name.localeCompare(b.name)); 
+            const hereDefs = D.defs.filter(d => d.folderId === cur).slice().sort((a, b) => a.headWord.localeCompare(b.headWord)); 
+
+            const addFolder = (name) => { update(s => { s.human.studyTools.defs.folders.push({ id: uid(), name, parentId: cur, createdAt: Date.now() }); }); toast(`📁 Folder “${name}” created`); }; 
+            const renameFolder = (f, name) => { update(s => { const t = s.human.studyTools.defs.folders.find(x => x.id === f.id); if (t) t.name = name; }); toast(`✏️ Folder renamed to “${name}”`); }; 
+            const deleteFolder = (f) => { 
+                const ids = [f.id].concat(folderDescendants(D.folders, f.id)); 
+                update(s => { 
+                    const T = s.human.studyTools.defs; 
+                    T.folders = T.folders.filter(x => ids.indexOf(x.id) < 0); 
+                    T.defs = T.defs.filter(x => ids.indexOf(x.folderId) < 0); 
+                    if (T.lastFolderId && ids.indexOf(T.lastFolderId) >= 0) T.lastFolderId = f.parentId || null; 
+                }); 
+                if (ids.indexOf(cur) >= 0) setCur(f.parentId || null); 
+                toast(`🗑️ Folder “${f.name}” deleted`); 
+            }; 
+            const saveDef = (data, existing) => { 
+                if (existing) { 
+                    update(s => { const t = s.human.studyTools.defs.defs.find(x => x.id === existing.id); if (t) { t.headWord = data.headWord; t.body = data.body; t.folderId = data.folderId; t.updatedAt = Date.now(); } }); 
+                    toast(`✏️ “${data.headWord}” updated`); 
+                } else { 
+                    update(s => { s.human.studyTools.defs.defs.push({ id: uid(), headWord: data.headWord, body: data.body, folderId: data.folderId, createdAt: Date.now(), updatedAt: Date.now() }); }); 
+                    toast(`📝 “${data.headWord}” saved`); 
+                } 
+            }; 
+            const deleteDef = (d) => { update(s => { const T = s.human.studyTools.defs; T.defs = T.defs.filter(x => x.id !== d.id); }); toast(`🗑️ “${d.headWord}” deleted`); }; 
+            const moveItem = (kind, id, destId) => { 
+                update(s => { 
+                    const T = s.human.studyTools.defs; 
+                    if (kind === 'folder') { const t = T.folders.find(x => x.id === id); if (t) t.parentId = destId; if (T.lastFolderId === id) T.lastFolderId = destId; } 
+                    else { const t = T.defs.find(x => x.id === id); if (t) t.folderId = destId; } 
+                }); 
+                toast('📦 Moved'); 
+            }; 
+
+            const searching = q.trim().length > 0; 
+            const ql = q.trim().toLowerCase(); 
+            const resultDefs = searching ? D.defs.filter(d => d.headWord.toLowerCase().indexOf(ql) >= 0 || d.body.toLowerCase().indexOf(ql) >= 0) : []; 
+            const resultFolders = searching ? D.folders.filter(f => f.name.toLowerCase().indexOf(ql) >= 0) : []; 
+
+            const folderCard = (f, withPath) => { 
+                const total = countDefsRecursive(D.defs, D.folders, f.id); 
+                const direct = D.defs.filter(d => d.folderId === f.id).length; 
+                const path = folderPath(D.folders, f.parentId).map(p => p.name).join(' › '); 
+                return ( 
+                    <Card key={f.id} style={{ cursor:'pointer' }}> 
+                        <div onClick={() => go(f.id)}> 
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: 8 }}> 
+                                <div style={{ fontSize: 26 }}>📁</div> 
+                                <span className="ac-pill" style={{ background: S.lavender+'22', color: S.lavender }}>{total} def{total === 1 ? '' : 's'}</span> 
+                            </div> 
+                            <div style={{ fontWeight: 700, marginBottom: 2, overflowWrap:'anywhere' }}>{f.name}</div> 
+                            <div style={{ fontSize: 11, color: S.muted }}>{direct} here · {total - direct} in subfolders</div> 
+                            {withPath && path && <div style={{ fontSize: 11, color: S.muted, marginTop: 6 }}>📍 {path}</div>} 
+                        </div> 
+                        <div style={{ display:'flex', gap: 6, marginTop: 10 }}> 
+                            <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11 }} onClick={() => setFolderModal({ title: 'Rename Folder', initial: f.name, onSave: n => renameFolder(f, n) })}>✏️ Rename</button> 
+                            <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11 }} onClick={() => setMove({ kind:'folder', id: f.id, name: f.name, excludeIds: [f.id].concat(folderDescendants(D.folders, f.id)), currentId: f.parentId })}>📦 Move</button> 
+                            <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11, color: S.danger, borderColor: S.danger+'55' }} onClick={() => setDel({ kind:'folder', item: f })}>🗑️</button> 
+                        </div> 
+                    </Card> 
+                ); 
+            }; 
+
+            const defCard = (d, withPath) => { 
+                const path = d.folderId ? folderPath(D.folders, d.folderId).map(p => p.name).join(' › ') : 'Root'; 
+                return ( 
+                    <Card key={d.id}> 
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: S.lavender, overflowWrap:'anywhere' }}>{d.headWord}</div> 
+                        <div style={{ fontSize: 13, opacity: .85, lineHeight: 1.55, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap:'anywhere' }}>{d.body}</div> 
+                        {withPath && <div style={{ fontSize: 11, color: S.muted, marginBottom: 8 }}>📍 {path}</div>} 
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 6 }}> 
+                            <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11 }} onClick={() => setDefModal({ title: 'Edit Definition', def: d, onSave: data => saveDef(data, d) })}>✏️ Edit</button> 
+                            <div style={{ display:'flex', gap: 6 }}> 
+                                <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11 }} title="Move to another folder" onClick={() => setMove({ kind:'def', id: d.id, name: d.headWord, excludeIds: [], currentId: d.folderId })}>📦</button> 
+                                <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11, color: S.danger, borderColor: S.danger+'55' }} onClick={() => setDel({ kind:'def', item: d })}>🗑️</button> 
+                            </div> 
+                        </div> 
+                    </Card> 
+                ); 
+            }; 
+
+            const delBody = del && del.kind === 'folder' ? (() => { 
+                const ids = [del.item.id].concat(folderDescendants(D.folders, del.item.id)); 
+                const nF = ids.length - 1, nD = D.defs.filter(d => ids.indexOf(d.folderId) >= 0).length; 
+                return `“${del.item.name}” and everything inside it will be removed — ${nF} subfolder${nF === 1 ? '' : 's'} and ${nD} definition${nD === 1 ? '' : 's'}. This cannot be undone.`; 
+            })() : del ? `“${del.item.headWord}” will be removed permanently.` : ''; 
+
+            return ( 
+                <div> 
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 10, marginBottom: 12 }}> 
+                        <div style={{ display:'flex', alignItems:'center', gap: 4, flexWrap:'wrap', fontSize: 13, minWidth: 0 }}> 
+                            <span onClick={() => go(null)} style={{ cursor:'pointer', color: cur ? S.lavender : S.text, fontWeight: 700 }}>📚 All Folders</span> 
+                            {crumbs.map(f => ( 
+                                <span key={f.id} style={{ display:'inline-flex', alignItems:'center', gap: 4 }}> 
+                                    <span style={{ color: S.muted }}>›</span> 
+                                    <span onClick={() => go(f.id)} style={{ cursor:'pointer', color: f.id === cur ? S.text : S.lavender, fontWeight: 700 }}>{f.name}</span> 
+                                </span> 
+                            ))} 
+                        </div> 
+                        <div style={{ display:'flex', gap: 8 }}> 
+                            <button className="ac-btn" onClick={() => setFolderModal({ title: 'New Folder', initial: '', onSave: addFolder })}>📁 + Folder</button> 
+                            <button className="ac-btn ac-btn-primary" onClick={() => setDefModal({ title: 'New Definition', def: null, onSave: data => saveDef(data, null) })}>📝 + Definition</button> 
+                        </div> 
+                    </div> 
+                    <input className="ac-input" style={{ marginBottom: 16 }} placeholder={`🔍 Search ${D.defs.length} definition${D.defs.length === 1 ? '' : 's'} and ${D.folders.length} folder${D.folders.length === 1 ? '' : 's'}…`} value={q} onChange={e => setQ(e.target.value)} /> 
+                    {searching ? ( 
+                        <div> 
+                            <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>{resultFolders.length + resultDefs.length} result{(resultFolders.length + resultDefs.length) === 1 ? '' : 's'} for “{q.trim()}”</div> 
+                            {resultFolders.length > 0 && <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(230px, 1fr))', marginBottom: 12 }}>{resultFolders.map(f => folderCard(f, true))}</div>} 
+                            {resultDefs.length > 0 && <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}>{resultDefs.map(d => defCard(d, true))}</div>} 
+                            {resultFolders.length + resultDefs.length === 0 && <STEmpty icon="🔍" title="No matches" sub="Nothing matched your search. Try another word or check the spelling." />} 
+                        </div> 
+                    ) : ( 
+                        <div> 
+                            <div style={{ fontSize: 12, fontWeight: 700, color: S.muted, letterSpacing: '.5px', textTransform: 'uppercase', margin: '2px 0 10px' }}>Folders ({subFolders.length})</div> 
+                            {subFolders.length > 0 ? ( 
+                                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(230px, 1fr))', marginBottom: 18 }}>{subFolders.map(f => folderCard(f, false))}</div> 
+                            ) : ( 
+                                <div style={{ fontSize: 13, color: S.muted, lineHeight: 1.6, marginBottom: 18, padding: '14px 16px', background: S.bg2, border: `1px dashed ${S.border}`, borderRadius: 12 }}> 
+                                    {cur === null ? 'No folders yet. Create one for each subject — e.g. Biology, History, Maths. Folders can hold other folders, so you can organise by “Biology › Chapter 1”.' : 'No subfolders here. Use “+ Definition” to store definitions in this folder, or “+ Folder” to nest another folder inside.' } 
+                                </div> 
+                            )} 
+                            <div style={{ fontSize: 12, fontWeight: 700, color: S.muted, letterSpacing: '.5px', textTransform: 'uppercase', margin: '2px 0 10px' }}>Definitions in this folder ({hereDefs.length})</div> 
+                            {hereDefs.length > 0 ? ( 
+                                <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))' }}>{hereDefs.map(d => defCard(d, false))}</div> 
+                            ) : ( 
+                                <STEmpty icon="📝" title="No definitions here yet" sub="Tap “+ Definition”, give it a head word and write its meaning. It will be stored in this folder." /> 
+                            )} 
+                        </div> 
+                    )} 
+                    {folderModal && <STFolderModal {...folderModal} onClose={() => setFolderModal(null)} />} 
+                    {defModal && <STDefModal {...defModal} folders={D.folders} defaultFolderId={cur} onClose={() => setDefModal(null)} />} 
+                    {move && <STMoveModal title={`Move “${move.name}”`} folders={D.folders} excludeIds={move.excludeIds} currentId={move.currentId} onPick={destId => moveItem(move.kind, move.id, destId)} onClose={() => setMove(null)} />} 
+                    {del && <STConfirmModal title={del.kind === 'folder' ? `Delete “${del.item.name}”?` : `Delete “${del.item.headWord}”?`} body={delBody} onConfirm={() => { if (del.kind === 'folder') deleteFolder(del.item); else deleteDef(del.item); }} onClose={() => setDel(null)} />} 
+                </div> 
+            ); 
+        } 
+
+        function RoughTool({ st, update, toast }) { 
+            const [text, setText] = useState((st.rough && st.rough.text) || ''); 
+            const [dirty, setDirty] = useState(false); 
+            const [savedAt, setSavedAt] = useState((st.rough && st.rough.updatedAt) || 0); 
+            const [confirmClear, setConfirmClear] = useState(false); 
+            const timer = useRef(null); 
+            const latest = useRef({}); 
+            latest.current = { text, dirty }; 
+            const persistState = (v) => { update(s => { s.human.studyTools.rough = { text: v, updatedAt: Date.now() }; }); }; 
+            const persist = (v) => { persistState(v); setSavedAt(Date.now()); setDirty(false); }; 
+            const onChange = (v) => { 
+                setText(v); setDirty(true); 
+                if (timer.current) clearTimeout(timer.current); 
+                timer.current = setTimeout(() => { timer.current = null; persist(v); }, 600); 
+            }; 
+            const flush = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } if (latest.current.dirty) persist(latest.current.text); }; 
+            useEffect(() => () => { if (timer.current) clearTimeout(timer.current); if (latest.current.dirty) persistState(latest.current.text); }, []); 
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0; 
+            const copy = () => { 
+                if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast('📋 Copied to clipboard!')).catch(() => toast('Copy failed')); 
+                else toast('Copy is not available here'); 
+            }; 
+            return ( 
+                <div> 
+                    <Card> 
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 8, marginBottom: 10 }}> 
+                            <div style={{ fontSize: 12, color: S.muted }}> 
+                                {dirty ? <span style={{ color: S.gold }}>✍️ Writing — saves automatically…</span> 
+                                    : savedAt ? <span style={{ color: S.mint }}>✅ Saved · {new Date(savedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span> 
+                                    : 'Type anything you like — it saves automatically.'} 
+                            </div> 
+                            <div style={{ display:'flex', gap: 8 }}> 
+                                <button className="ac-btn" style={{ padding:'6px 12px', fontSize: 12 }} disabled={!text} onClick={copy}>📋 Copy</button> 
+                                <button className="ac-btn" style={{ padding:'6px 12px', fontSize: 12, color: S.danger, borderColor: S.danger+'55' }} disabled={!text} onClick={() => setConfirmClear(true)}>🧹 Clear</button> 
+                            </div> 
+                        </div> 
+                        <textarea className="ac-input" style={{ minHeight: 380, resize: 'vertical', lineHeight: 1.7, fontSize: 14 }} placeholder="Jot down anything — formulas, ideas, reminders, essay drafts… Everything is kept safe in your save file." value={text} onChange={e => onChange(e.target.value)} onBlur={flush} /> 
+                        <div style={{ display:'flex', justifyContent:'space-between', fontSize: 11, color: S.muted, marginTop: 8 }}> 
+                            <span>{words} word{words === 1 ? '' : 's'} · {text.length} character{text.length === 1 ? '' : 's'}</span> 
+                            <span>✏️ Rough</span> 
+                        </div> 
+                    </Card> 
+                    {confirmClear && <STConfirmModal title="Clear the Rough pad?" body="Everything you have typed here will be erased. This cannot be undone." confirmLabel="Clear it" onConfirm={() => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } persist(''); setText(''); }} onClose={() => setConfirmClear(false)} />} 
+                </div> 
+            ); 
+        } 
+        // --- ST: Homeworks tool & main tab ---
+        function HomeworksTool({ st, update, toast }) { 
+            const HWs = st.homeworks || []; 
+            const [form, setForm] = useState(null); 
+            const [filter, setFilter] = useState('active'); 
+            const [sortMode, setSortMode] = useState('priority'); 
+            const [del, setDel] = useState(null); 
+
+            const todayMs = new Date(todayKey() + 'T00:00:00').getTime(); 
+            const dueMs = hw => hw.due ? new Date(hw.due + 'T00:00:00').getTime() : Infinity; 
+            const fmtDue = ds => new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
+            const prOrder = p => (HW_PRIORITIES[p] || HW_PRIORITIES.medium).order; 
+
+            const active = HWs.filter(h => !h.done); 
+            const doneHws = HWs.filter(h => h.done); 
+            const overdue = active.filter(h => h.due && dueMs(h) < todayMs); 
+            const dueToday = active.filter(h => h.due && dueMs(h) === todayMs); 
+
+            const openNew = () => setForm({ id: null, title: '', subject: '', due: '', priority: 'medium', notes: '' }); 
+            const openEdit = hw => setForm({ id: hw.id, title: hw.title, subject: hw.subject || '', due: hw.due || '', priority: hw.priority || 'medium', notes: hw.notes || '' }); 
+            const saveForm = () => { 
+                const t = form.title.trim(); if (!t) return; 
+                if (form.id) { 
+                    update(s => { const it = s.human.studyTools.homeworks.find(x => x.id === form.id); if (it) { it.title = t; it.subject = form.subject.trim(); it.due = form.due || null; it.priority = form.priority; it.notes = form.notes.trim(); } }); 
+                    toast('✏️ Homework updated'); 
+                } else { 
+                    update(s => { s.human.studyTools.homeworks.push({ id: uid(), title: t, subject: form.subject.trim(), due: form.due || null, priority: form.priority, notes: form.notes.trim(), done: false, createdAt: Date.now(), completedAt: null }); }); 
+                    toast('📋 Homework added!'); 
+                } 
+                setForm(null); 
+            }; 
+            const toggle = hw => { 
+                update(s => { const it = s.human.studyTools.homeworks.find(x => x.id === hw.id); if (it) { it.done = !it.done; it.completedAt = it.done ? Date.now() : null; } }); 
+                toast(hw.done ? '↩️ Homework reopened' : '🎉 Homework done — nice work!'); 
+                if (!hw.done) FX.burst(['🎉','✨']); 
+            }; 
+            const remove = hw => { update(s => { s.human.studyTools.homeworks = s.human.studyTools.homeworks.filter(x => x.id !== hw.id); }); toast('🗑️ Homework deleted'); }; 
+
+            const visible = HWs.filter(hw => filter === 'all' ? true : filter === 'done' ? hw.done : !hw.done) 
+                .slice().sort((a, b) => { 
+                    if (a.done !== b.done) return a.done ? 1 : -1; 
+                    if (a.done && b.done) return (b.completedAt || 0) - (a.completedAt || 0); 
+                    if (sortMode === 'due') { if (dueMs(a) !== dueMs(b)) return dueMs(a) - dueMs(b); return prOrder(a.priority) - prOrder(b.priority); } 
+                    if (prOrder(a.priority) !== prOrder(b.priority)) return prOrder(a.priority) - prOrder(b.priority); 
+                    return dueMs(a) - dueMs(b); 
+                }); 
+
+            const dueBadge = hw => { 
+                if (!hw.due) return <span className="ac-pill" style={{ background: S.bg2, color: S.muted }}>📅 No due date</span>; 
+                const dateTxt = fmtDue(hw.due); 
+                if (hw.done) return <span className="ac-pill" style={{ background: S.bg2, color: S.muted }}>📅 {dateTxt}</span>; 
+                const days = Math.round((dueMs(hw) - todayMs) / 86400000); 
+                if (days < 0) return <span className="ac-pill" style={{ background: S.danger+'22', color: S.danger }}>⚠️ Overdue · {dateTxt}</span>; 
+                if (days === 0) return <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>🔥 Due today</span>; 
+                if (days === 1) return <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>Due tomorrow · {dateTxt}</span>; 
+                if (days <= 3) return <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>⏳ In {days} days · {dateTxt}</span>; 
+                return <span className="ac-pill" style={{ background: S.bg2, color: S.muted }}>📅 {dateTxt}</span>; 
+            }; 
+
+            const hwCard = hw => { 
+                const P = HW_PRIORITIES[hw.priority] || HW_PRIORITIES.medium; 
+                return ( 
+                    <Card key={hw.id} style={{ opacity: hw.done ? .55 : 1 }}> 
+                        <div style={{ display:'flex', gap: 12, alignItems: 'flex-start' }}> 
+                            <button className="ac-btn" style={{ padding:'6px 10px', fontSize: 15, background: hw.done ? S.mint+'22' : S.panel2, borderColor: hw.done ? S.mint : S.border }} title={hw.done ? 'Mark as not done' : 'Mark as done'} onClick={() => toggle(hw)}>{hw.done ? '✅' : '⬜'}</button> 
+                            <div style={{ flex: 1, minWidth: 0 }}> 
+                                <div style={{ fontWeight: 700, fontSize: 14, textDecoration: hw.done ? 'line-through' : 'none', overflowWrap:'anywhere' }}>{hw.title}</div> 
+                                <div style={{ display:'flex', gap: 6, flexWrap:'wrap', marginTop: 8 }}> 
+                                    {hw.subject ? <span className="ac-pill" style={{ background: S.blue+'22', color: S.blue }}>📘 {hw.subject}</span> : null} 
+                                    <span className="ac-pill" style={{ background: P.color+'22', color: P.color }}>{P.icon} {P.label}</span> 
+                                    {dueBadge(hw)} 
+                                </div> 
+                                {hw.notes ? <div style={{ fontSize: 12, color: S.muted, marginTop: 8, lineHeight: 1.5, overflowWrap:'anywhere' }}>🗒️ {hw.notes}</div> : null} 
+                            </div> 
+                            <div style={{ display:'flex', flexDirection:'column', gap: 6 }}> 
+                                <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11 }} title="Edit" onClick={() => openEdit(hw)}>✏️</button> 
+                                <button className="ac-btn" style={{ padding:'5px 10px', fontSize: 11, color: S.danger, borderColor: S.danger+'55' }} title="Delete" onClick={() => setDel(hw)}>🗑️</button> 
+                            </div> 
+                        </div> 
+                    </Card> 
+                ); 
+            }; 
+
+            return ( 
+                <div> 
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 10, marginBottom: 12 }}> 
+                        <div style={{ display:'flex', gap: 4, flexWrap:'wrap' }}> 
+                            {[['active', `📋 To do (${active.length})`], ['done', `✅ Done (${doneHws.length})`], ['all', `🗂️ All (${HWs.length})`]].map(([k, l]) => ( 
+                                <button key={k} className={`ac-tab ${filter === k ? 'active' : ''}`} onClick={() => setFilter(k)}>{l}</button> 
+                            ))} 
+                        </div> 
+                        <div style={{ display:'flex', gap: 4, alignItems:'center', flexWrap:'wrap' }}> 
+                            <span style={{ fontSize: 11, color: S.muted }}>Sort</span> 
+                            {[['priority', '⚡ Priority'], ['due', '📅 Due date']].map(([k, l]) => ( 
+                                <button key={k} className={`ac-tab ${sortMode === k ? 'active' : ''}`} onClick={() => setSortMode(k)}>{l}</button> 
+                            ))} 
+                            <button className="ac-btn ac-btn-primary" onClick={openNew}>+ Add Homework</button> 
+                        </div> 
+                    </div> 
+                    {overdue.length > 0 && <div style={{ padding: '10px 14px', borderRadius: 10, background: S.danger+'15', border: `1px solid ${S.danger}44`, color: S.danger, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>⚠️ {overdue.length} homework item{overdue.length === 1 ? '' : 's'} past it{overdue.length === 1 ? 's' : ''} due date.</div>} 
+                    {dueToday.length > 0 && <div style={{ padding: '10px 14px', borderRadius: 10, background: S.gold+'15', border: `1px solid ${S.gold}44`, color: S.gold, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>🔥 {dueToday.length} due today — you've got this!</div>} 
+                    {visible.length > 0 ? ( 
+                        <div className="ac-col">{visible.map(hwCard)}</div> 
+                    ) : ( 
+                        <STEmpty icon="📋" title={filter === 'active' ? (HWs.length ? 'All clear — everything is done!' : 'No homework yet') : (filter === 'done' ? 'Nothing completed yet' : 'No homework yet')} sub={filter === 'active' ? (HWs.length ? 'Everything on your list is completed. Enjoy the break or review the Done tab.' : 'Add your homework with “+ Add Homework”, set a priority and a due date, and it will stay organised for you.') : 'Homework you add will show up here.'} /> 
+                    )} 
+                    {form && ( 
+                        <div className="ac-modal-bg" onClick={() => setForm(null)}> 
+                            <div className="ac-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}> 
+                                <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 14 }}>{form.id ? 'Edit Homework' : 'New Homework'}</div> 
+                                <div style={{ fontSize: 12, color: S.muted, marginBottom: 6 }}>Title *</div> 
+                                <input className="ac-input" autoFocus placeholder="e.g. Maths worksheet 4.2" value={form.title} maxLength={120} onChange={e => setForm({ ...form, title: e.target.value })} /> 
+                                <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr', gap: 10, marginTop: 12 }}> 
+                                    <div> 
+                                        <div style={{ fontSize: 12, color: S.muted, marginBottom: 6 }}>Subject</div> 
+                                        <input className="ac-input" placeholder="e.g. Maths" value={form.subject} maxLength={40} onChange={e => setForm({ ...form, subject: e.target.value })} /> 
+                                    </div> 
+                                    <div> 
+                                        <div style={{ fontSize: 12, color: S.muted, marginBottom: 6 }}>Due date</div> 
+                                        <input type="date" className="ac-input" value={form.due} onChange={e => setForm({ ...form, due: e.target.value })} /> 
+                                    </div> 
+                                </div> 
+                                <div style={{ fontSize: 12, color: S.muted, margin: '12px 0 6px' }}>Priority</div> 
+                                <div style={{ display:'flex', gap: 8 }}> 
+                                    {Object.keys(HW_PRIORITIES).map(p => { const P = HW_PRIORITIES[p]; const on = form.priority === p; return ( 
+                                        <button key={p} type="button" className="ac-btn" style={{ flex: 1, background: on ? P.color+'22' : S.panel2, borderColor: on ? P.color : S.border, color: on ? P.color : S.muted, fontWeight: 700 }} onClick={() => setForm({ ...form, priority: p })}>{P.icon} {P.label}</button> 
+                                    ); })} 
+                                </div> 
+                                <div style={{ fontSize: 12, color: S.muted, margin: '12px 0 6px' }}>Notes (optional)</div> 
+                                <textarea className="ac-input" style={{ minHeight: 70, resize: 'vertical', lineHeight: 1.5 }} placeholder="Pages, chapters, links…" value={form.notes} maxLength={500} onChange={e => setForm({ ...form, notes: e.target.value })} /> 
+                                <div style={{ display:'flex', gap: 10, marginTop: 18 }}> 
+                                    <button className="ac-btn" style={{ flex: 1 }} onClick={() => setForm(null)}>Cancel</button> 
+                                    <button className="ac-btn ac-btn-primary" style={{ flex: 1 }} disabled={!form.title.trim()} onClick={saveForm}>{form.id ? 'Save Changes' : 'Add Homework'}</button> 
+                                </div> 
+                            </div> 
+                        </div> 
+                    )} 
+                    {del && <STConfirmModal title={`Delete “${del.title}”?`} body="This homework will be removed permanently." onConfirm={() => remove(del)} onClose={() => setDel(null)} />} 
+                </div> 
+            ); 
+        } 
+
+        function StudyingToolsTab({ state, update, toast }) { 
+            const st = state.human.studyTools || defaultStudyTools(); 
+            const [tool, setTool] = useState(['rough', 'homeworks'].indexOf(st.lastTool) >= 0 ? st.lastTool : 'defs'); 
+            const TOOLS = [['defs', '📖 Definitions'], ['rough', '✏️ Rough'], ['homeworks', '📋 Homeworks']]; 
+            const pick = t => { setTool(t); update(s => { if (!s.human.studyTools) s.human.studyTools = defaultStudyTools(); s.human.studyTools.lastTool = t; }); }; 
+            const nDefs = (st.defs && st.defs.defs ? st.defs.defs.length : 0); 
+            const nHw = (st.homeworks || []).filter(h => !h.done).length; 
+            return ( 
+                <div className="ac-fade"> 
+                    <Section title="Studying Tools" sub="Your own definitions library, scratchpad and homework planner — saved with your game."> 
+                        <div style={{ display:'flex', gap: 4, flexWrap:'wrap' }}> 
+                            {TOOLS.map(([id, label]) => ( 
+                                <button key={id} className={`ac-tab ${tool === id ? 'active' : ''}`} onClick={() => pick(id)}> 
+                                    {label}{id === 'defs' && nDefs ? ` (${nDefs})` : ''}{id === 'homeworks' && nHw ? ` (${nHw})` : ''} 
+                                </button> 
+                            ))} 
+                        </div> 
+                    </Section> 
+                    {tool === 'defs' && <DefinitionsTool st={st} update={update} toast={toast} />} 
+                    {tool === 'rough' && <RoughTool st={st} update={update} toast={toast} />} 
+                    {tool === 'homeworks' && <HomeworksTool st={st} update={update} toast={toast} />} 
+                </div> 
+            ); 
+        } 
+
         // ============================================================ // MAIN APP // ============================================================ 
         const TABS = [ 
             { id:'dashboard', label:'Dashboard', icon:'🏠' }, 
             { id:'ranked', label:'Ranked', icon:'⚔️' }, 
             { id:'assignments', label:'Assignments', icon:'📐' }, 
             { id:'studying', label:'Studying', icon:'📚' }, 
+            { id:'studytools', label:'Studying Tools', icon:'🧰' }, 
             { id:'othertasks', label:'Other Tasks', icon:'🧹' }, 
             { id:'mocks', label:'Mock Tests', icon:'📝' }, 
             { id:'ranks', label:'Titles & Tiers', icon:'🏅' }, 
@@ -2218,7 +2706,9 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                         if (!data.human || !data.ai) throw new Error('Invalid save data'); 
                         const defaults = initHumanState(); 
                         data.human = { ...defaults, ...data.human }; 
-                        if (!data.profiles) data.profiles = {}; 
+                        if (!data.human.studyTools) data.human.studyTools = defaultStudyTools();
+                        else data.human.studyTools = { ...defaultStudyTools(), ...data.human.studyTools };
+                        if (!data.profiles) data.profiles = {};
                         if (!data.recentMatches) data.recentMatches = [];
                         stateRef.current = data; 
                         saveState(data); 
@@ -2286,6 +2776,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                         {tab === 'ranked' && <RankedTab state={state} catalog={catalog} lbRP={lbRP} lbRPByCat={lbRPByCat} onStartMatch={handleStartMatch} onSetCategory={handleSetRankedCategory} toast={toastMsg} onOpenProfile={setProfileModalId} />}
                         {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
+                        {tab === 'studytools' && <StudyingToolsTab state={state} update={update} toast={toastMsg} />} 
                         {tab === 'othertasks' && <OtherTasksTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
                         {tab === 'ranks' && <TitlesTab state={state} lbRP={lbRP} lbRPByCat={lbRPByCat} />}
