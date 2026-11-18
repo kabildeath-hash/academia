@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academia - 1000 Player Competition</title>
+    <title>Academia - Season RISE</title>
     
     <!-- React, ReactDOM, and Babel Standalone CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -37,7 +37,7 @@
 </head>
 <body>
     <div id="root">
-        <div id="loading">Loading Academia... (Please wait a few seconds)</div>
+        <div id="loading">Loading Academia - Season RISE... (Please wait a few seconds)</div>
     </div>
 
     <script>
@@ -70,7 +70,7 @@
         const weekKey = (d=new Date()) => { const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-t.getDay()); return todayKey(t); }; 
         const fmtInt = n => Math.floor(n).toLocaleString('en-US'); 
         const fmtShort = n => { n=Math.floor(n); if(n>=1e12)return (n/1e12).toFixed(2)+'T'; if(n>=1e9)return (n/1e9).toFixed(2)+'B'; if(n>=1e6)return (n/1e6).toFixed(2)+'M'; if(n>=1e3)return (n/1e3).toFixed(1)+'K'; return n.toString(); }; 
-        const fmtTp = n => n.toFixed(2); 
+        const fmtTp = n => n.toFixed(1); 
         const fmtTime = (ms) => { const s=Math.max(0,Math.floor(ms/1000)); const d=Math.floor(s/86400); const h=Math.floor((s%86400)/3600); const m=Math.floor((s%3600)/60); if(d>0) return `${d}d ${h}h`; if(h>0) return `${h}h ${m}m`; if(m>0) return `${m}m ${s%60}s`; return `${s}s`; }; 
         const fmtTime12 = ms => new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); 
 
@@ -84,7 +84,7 @@
             "Chasing perfection one page at a time.",
             "Fueled by caffeine and relentless ambition.",
             "Quietly outworking the competition in the library corner.",
-            "Tournament strategist with an eye for the crown.",
+            "Ranked battle strategist with an eye for the crown.",
             "Early mornings, deep focus, flawless execution.",
             "Striving to reach the apex of the academic ladder."
         ];
@@ -156,10 +156,6 @@
             scholars_fortune: { name:'Scholar\'s Fortune', emoji:'🍀', desc:'Doubles egg rarity luck.', dur:60*60*1000, cost:150 }, 
             streak_protector: { name:'Streak Protector', emoji:'🛡️', desc:'Protects streak from one missed day.', dur:60*60*1000, cost:120 } 
         }; 
-        const DAILY_NAMES = ['Dawn Sprint','Midday Clash','Lumen Cup','Vesper Trials','Starlit Sprint']; 
-        const MAJOR_NAMES = ['Grand Academic Open','Solar Invitational','Eclipse Championship','Lunar Masters']; 
-        const WEEKLY_NAMES = ['Apex Scholar League','Midnight Grand Prix','Celestial Cup','Arcane Gauntlet']; 
-        const MONTHLY_NAMES = ['The Ivory Crown','Grandmaster\'s Gala','Sovereign Tournament','Imperial Scholars Cup']; 
         const ASSIGNMENT_TASKS = [ { id:'math_page', name:'Mathematics Page', desc:'1 page of Mathematics assignment', xp:1, icon:'📐' }, { id:'english_page', name:'English Page', desc:'1 page of English assignment', xp:2, icon:'📖' }, { id:'physics_page', name:'Advanced Physics Page', desc:'1 page of Advanced Physics', xp:2, icon:'⚛️' }, { id:'highlevel_page', name:'Extra High-Level Page', desc:'1 page of Extra High-Level assignment', xp:3, icon:'🎓' }, { id:'project_hour', name:'Project Work', desc:'1 hour of project work', xp:30, icon:'🛠️', long:true } ]; 
         const STUDY_TASKS = [ { id:'recall_page', name:'Recall a Page', desc:'Recall 1 page worth of information', xp:5, icon:'📄' }, { id:'recall_problem', name:'Recall a Numerical Problem', desc:'Recall 1 numerical problem', xp:10, icon:'🧮' }, { id:'recall_defs', name:'Recall 5 Definitions', desc:'Recall 5 definitions', xp:20, icon:'📚' } ]; 
         const OTHER_TASKS = [ { id:'clean_ten', name:'Clean/Organize 10 things', desc:'Clean or organize 10 items around your space', xp:10, icon:'🧹' } ];
@@ -170,20 +166,20 @@
         const DEF_SET = [ { term:'Derivative', def:'The rate of change of a function.' }, { term:'Integral', def:'The accumulation of quantities, area under a curve.' }, { term:'Matrix', def:'A rectangular array of numbers.' }, { term:'Vector', def:'A quantity with magnitude and direction.' }, { term:'Eigenvalue', def:'Scalar λ such that Av = λv for nonzero v.' }, { term:'Photon', def:'A quantum of electromagnetic radiation.' }, { term:'Entropy', def:'A measure of disorder in a system.' }, { term:'Momentum', def:'The product of mass and velocity.' }, { term:'Catalyst', def:'Speeds reaction without being consumed.' }, { term:'Osmosis', def:'Movement of solvent across a semipermeable membrane.' } ]; 
 
         // ============================================================ // VIPs // ============================================================ 
-        const VIP_DEFS = [ { name:'Doroteya Graves', nat:'Russian', age:24, status:'University', spec:'Advanced Mathematics', personality:'Perfectionist', vipTier:'A', arch:'Perfectionist', bio:'The silent standard-bearer. Studies in cathedral silences.', sigBadge:'Obsidian Seal', initXP:[180000,220000], rate:[1400,1800] }, { name:'Iris Fujiwara', nat:'Japanese', age:22, status:'University', spec:'Theoretical Physics', personality:'Burst Grinder', vipTier:'A', arch:'Burst Grinder', bio:'Fluent in elegant sprints of genius. Disappears for days.', sigBadge:'Amethyst Iris', initXP:[170000,210000], rate:[1300,1700] }, { name:'Jin Kiyora', nat:'Japanese', age:21, status:'Entrance Exam', spec:'Applied Chemistry', personality:'Tournament Specialist', vipTier:'A', arch:'Tournament Specialist', bio:'A tournament sniper. Rarely studied, always winning.', sigBadge:'Crimson Circuit', initXP:[175000,205000], rate:[1350,1750] }, { name:'Xuebi Wang', nat:'Chinese', age:23, status:'University', spec:'Pure Mathematics', personality:'Consistent Scholar', vipTier:'B', arch:'Consistent Scholar', bio:'Quietly accumulates XP the way winter accumulates snow.', sigBadge:'Jade Lantern', initXP:[110000,145000], rate:[800,1100] }, { name:'Charles Chevalier', nat:'French', age:26, status:'University', spec:'Philosophy & Mathematics', personality:'Occasional Prodigy', vipTier:'B', arch:'Occasional Prodigy', bio:'Vanishes for weeks, returns having reinvented himself.', sigBadge:'Silver Fleur', initXP:[100000,135000], rate:[750,1000] }, { name:'Dawn Murasaki', nat:'Japanese', age:20, status:'Entrance Exam', spec:'English Literature', personality:'Early Bird', vipTier:'B', arch:'Early Bird', bio:'First light, first page. Studies before the birds.', sigBadge:'Rose Dawn', initXP:[105000,140000], rate:[780,1050] }, { name:'Skyla Ravencroft', nat:'American', age:25, status:'University', spec:'Astrophysics', personality:'Night Owl', vipTier:'B', arch:'Night Owl', bio:'Sleepless genius. Best work at 3am under desk lamps.', sigBadge:'Obsidian Wing', initXP:[115000,145000], rate:[850,1150] } ]; 
+        const VIP_DEFS = [ { name:'Doroteya Graves', nat:'Russian', age:24, status:'University', spec:'Advanced Mathematics', personality:'Perfectionist', vipTier:'A', arch:'Perfectionist', bio:'The silent standard-bearer. Studies in cathedral silences.', sigBadge:'Obsidian Seal', initXP:[180000,220000], rate:[1400,1800] }, { name:'Iris Fujiwara', nat:'Japanese', age:22, status:'University', spec:'Theoretical Physics', personality:'Burst Grinder', vipTier:'A', arch:'Burst Grinder', bio:'Fluent in elegant sprints of genius. Disappears for days.', sigBadge:'Amethyst Iris', initXP:[170000,210000], rate:[1300,1700] }, { name:'Jin Kiyora', nat:'Japanese', age:21, status:'Entrance Exam', spec:'Applied Chemistry', personality:'Ranked Specialist', vipTier:'A', arch:'Ranked Specialist', bio:'A ranked battle sniper. Rarely studied, always winning.', sigBadge:'Crimson Circuit', initXP:[175000,205000], rate:[1350,1750] }, { name:'Xuebi Wang', nat:'Chinese', age:23, status:'University', spec:'Pure Mathematics', personality:'Consistent Scholar', vipTier:'B', arch:'Consistent Scholar', bio:'Quietly accumulates XP the way winter accumulates snow.', sigBadge:'Jade Lantern', initXP:[110000,145000], rate:[800,1100] }, { name:'Charles Chevalier', nat:'French', age:26, status:'University', spec:'Philosophy & Mathematics', personality:'Occasional Prodigy', vipTier:'B', arch:'Occasional Prodigy', bio:'Vanishes for weeks, returns having reinvented himself.', sigBadge:'Silver Fleur', initXP:[100000,135000], rate:[750,1000] }, { name:'Dawn Murasaki', nat:'Japanese', age:20, status:'Entrance Exam', spec:'English Literature', personality:'Early Bird', vipTier:'B', arch:'Early Bird', bio:'First light, first page. Studies before the birds.', sigBadge:'Rose Dawn', initXP:[105000,140000], rate:[780,1050] }, { name:'Skyla Ravencroft', nat:'American', age:25, status:'University', spec:'Astrophysics', personality:'Night Owl', vipTier:'B', arch:'Night Owl', bio:'Sleepless genius. Best work at 3am under desk lamps.', sigBadge:'Obsidian Wing', initXP:[115000,145000], rate:[850,1150] } ]; 
         const ARCHETYPES = [ 
-            { id:'consistent', name:'Consistent Scholar', rateMul:[0.7,1.1], varMul:0.2, joinMul:0.9, tComp:1.0, peakHour:14 }, 
-            { id:'burst', name:'Burst Grinder', rateMul:[0.4,1.5], varMul:0.9, joinMul:0.8, tComp:1.0, peakHour:20 }, 
-            { id:'tspec', name:'Tournament Specialist', rateMul:[0.5,0.9], varMul:0.4, joinMul:1.6, tComp:1.4, peakHour:18 }, 
-            { id:'perfect', name:'Perfectionist', rateMul:[0.8,1.15], varMul:0.15, joinMul:0.85, tComp:1.1, peakHour:10 }, 
-            { id:'night', name:'Night Owl', rateMul:[0.6,1.2], varMul:0.5, joinMul:1.0, tComp:1.0, peakHour:2 }, 
-            { id:'early', name:'Early Bird', rateMul:[0.65,1.1], varMul:0.35, joinMul:1.0, tComp:1.0, peakHour:6 }, 
-            { id:'memo', name:'Memorization Expert', rateMul:[0.6,1.0], varMul:0.3, joinMul:0.6, tComp:1.0, peakHour:15 }, 
-            { id:'assign', name:'Assignment Machine', rateMul:[0.85,1.25], varMul:0.35, joinMul:0.5, tComp:0.9, peakHour:11 }, 
-            { id:'prodigy', name:'Occasional Prodigy', rateMul:[0.3,1.6], varMul:1.0, joinMul:0.7, tComp:1.1, peakHour:22 }, 
-            { id:'unpredictable', name:'Unpredictable Competitor', rateMul:[0.2,1.7], varMul:1.2, joinMul:1.0, tComp:1.0, peakHour:13 }, 
-            { id:'strategist', name:'Competitive Strategist', rateMul:[0.6,1.0], varMul:0.3, joinMul:1.3, tComp:1.25, peakHour:16 }, 
-            { id:'casual', name:'Casual Learner', rateMul:[0.2,0.6], varMul:0.5, joinMul:0.35, tComp:0.8, peakHour:19 } 
+            { id:'consistent', name:'Consistent Scholar', rateMul:[0.7,1.1], varMul:0.2, joinMul:0.9, rComp:1.0, peakHour:14 }, 
+            { id:'burst', name:'Burst Grinder', rateMul:[0.4,1.5], varMul:0.9, joinMul:0.8, rComp:1.0, peakHour:20 }, 
+            { id:'rspec', name:'Ranked Specialist', rateMul:[0.5,0.9], varMul:0.4, joinMul:1.6, rComp:1.4, peakHour:18 }, 
+            { id:'perfect', name:'Perfectionist', rateMul:[0.8,1.15], varMul:0.15, joinMul:0.85, rComp:1.1, peakHour:10 }, 
+            { id:'night', name:'Night Owl', rateMul:[0.6,1.2], varMul:0.5, joinMul:1.0, rComp:1.0, peakHour:2 }, 
+            { id:'early', name:'Early Bird', rateMul:[0.65,1.1], varMul:0.35, joinMul:1.0, rComp:1.0, peakHour:6 }, 
+            { id:'memo', name:'Memorization Expert', rateMul:[0.6,1.0], varMul:0.3, joinMul:0.6, rComp:1.0, peakHour:15 }, 
+            { id:'assign', name:'Assignment Machine', rateMul:[0.85,1.25], varMul:0.35, joinMul:0.5, rComp:0.9, peakHour:11 }, 
+            { id:'prodigy', name:'Occasional Prodigy', rateMul:[0.3,1.6], varMul:1.0, joinMul:0.7, rComp:1.1, peakHour:22 }, 
+            { id:'unpredictable', name:'Unpredictable Competitor', rateMul:[0.2,1.7], varMul:1.2, joinMul:1.0, rComp:1.0, peakHour:13 }, 
+            { id:'strategist', name:'Competitive Strategist', rateMul:[0.6,1.0], varMul:0.3, joinMul:1.3, rComp:1.25, peakHour:16 }, 
+            { id:'casual', name:'Casual Learner', rateMul:[0.2,0.6], varMul:0.5, joinMul:0.35, rComp:0.8, peakHour:19 } 
         ]; 
 
         // ============================================================ // CATALOG & PROFILES // ============================================================ 
@@ -214,14 +210,13 @@
                 const u = makeUsername(v.name, usedUsers); 
                 const initXP = Math.floor(rand(rng, v.initXP[0], v.initXP[1])); 
                 const rate = Math.floor(rand(rng, v.rate[0], v.rate[1])); 
-                const initTP = Math.floor(rand(rng, v.vipTier==='A'?280:140, v.vipTier==='A'?480:280)); 
-                const tpRate = rand(rng, v.vipTier==='A'?1.4:0.7, v.vipTier==='A'?2.2:1.5); 
+                const initRP = Math.floor(rand(rng, v.vipTier==='A'?1400:1100, v.vipTier==='A'?1800:1400)); 
                 const reg = now - Math.floor(rand(rng, 300, 1200)) * DAY; 
                 players.push({ 
                     id: 'p'+(i+1), name: v.name, username: u, nationality: v.nat, age: v.age, status: v.status, specialization: v.spec, personality: v.personality, vip: true, vipTier: v.vipTier, sigBadge: v.sigBadge, bio: v.bio, registerDate: reg, 
                     avatar: pick(rng, AVATARS), motto: pick(rng, MOTTOS), favSubject: v.spec,
                     petCollection: shuffle(EGGS, rng).slice(0, randInt(rng, 2, 4)).map(e => { const pet = pick(rng, e.pets); return { eggId: e.id, petName: pet.name, rarity: pet.rar, acquired: now - randInt(rng,5,200)*DAY }; }), 
-                    aiProfile: { archetype: v.personality, dailyXpAvg: rate, dailyTpAvg: tpRate, variability: 0.3, joinTendency: v.vipTier==='A'?0.85:0.7, tournamentCompetitiveness: 1.2, initialXP: initXP, initialTP: initTP, peakHour: 14 } 
+                    aiProfile: { archetype: v.personality, dailyXpAvg: rate, dailyRpAvg: rand(rng, 0.5, 2.0), variability: 0.3, joinTendency: v.vipTier==='A'?0.85:0.7, rankedCompetitiveness: 1.2, initialXP: initXP, initialRP: initRP, peakHour: 14 } 
                 }); 
             }); 
 
@@ -250,13 +245,12 @@
                 const dailyRate = Math.floor(rand(rng, 25, 400) * arch.rateMul[1] * ageFactor / 2 + rand(rng, 10, 200)); 
                 const accountAgeDays = (now - reg) / DAY; 
                 const initXP = Math.max(0, Math.floor(dailyRate * accountAgeDays * rand(rng, 0.5, 1.1))); 
-                const initTP = Math.max(0, Math.floor(rand(rng, 0, 80) * (1 + accountAgeDays/300) * arch.joinMul)); 
-                const tpRate = rand(rng, 0.03, 0.4) * arch.joinMul; 
+                const initRP = Math.max(500, Math.floor(1000 + rand(rng, -300, 300) * (1 + accountAgeDays/500))); 
                 
                 players.push({ 
                     id: 'p'+(made+1), name, username: u, nationality: NAT_NAMES[origin], age, status, specialization: pick(rng, specPool), personality: arch.name, vip: false, registerDate: reg, petCollection: [], 
                     avatar: pick(rng, AVATARS), motto: pick(rng, MOTTOS), favSubject: pick(rng, specPool), bio: pick(rng, BIOS),
-                    aiProfile: { archetype: arch.name, dailyXpAvg: Math.max(20, dailyRate), dailyTpAvg: tpRate, variability: 0.3 + arch.varMul * rand(rng, 0.4, 1.2), joinTendency: clamp(arch.joinMul * rand(rng, 0.4, 1.0), 0.05, 0.95), tournamentCompetitiveness: arch.tComp || rand(rng, 0.7, 1.3), initialXP: initXP, initialTP: initTP, peakHour: arch.peakHour } 
+                    aiProfile: { archetype: arch.name, dailyXpAvg: Math.max(20, dailyRate), dailyRpAvg: rand(rng, 0.1, 1.0), variability: 0.3 + arch.varMul * rand(rng, 0.4, 1.2), joinTendency: clamp(arch.joinMul * rand(rng, 0.4, 1.0), 0.05, 0.95), rankedCompetitiveness: arch.rComp || rand(rng, 0.7, 1.3), initialXP: initXP, initialRP: initRP, peakHour: arch.peakHour } 
                 }); 
                 made++; 
             } 
@@ -264,19 +258,19 @@
         } 
 
         // ============================================================ // STATE & PERSISTENCE // ============================================================ 
-        const SAVE_KEY = 'academia_save_v1'; 
-        const STATE_VERSION = 3; 
+        const SAVE_KEY = 'academia_save_v2'; 
+        const STATE_VERSION = 4; 
         
         function initHumanState() { 
             const now = Date.now(); 
             return { 
-                name: 'Aria Nakamura', xp: 0, tp: 0, combo: 0, comboProgress: 0, comboExpiry: 0, highestCombo: 0, streak: 0, longestStreak: 0, lastTaskDay: null, tasksCompleted: 0, assignmentsCompleted: 0, recalledPages: 0, numericalProblems: 0, definitionsRecalled: 0, mockTestsCompleted: 0, mockScoreSum: 0, tournamentsJoined: 0, tournamentVictories: 0, 
+                name: 'Aria Nakamura', xp: 0, rp: 1000, combo: 0, comboProgress: 0, comboExpiry: 0, highestCombo: 0, streak: 0, longestStreak: 0, lastTaskDay: null, tasksCompleted: 0, assignmentsCompleted: 0, recalledPages: 0, numericalProblems: 0, definitionsRecalled: 0, mockTestsCompleted: 0, mockScoreSum: 0, rankedBattlesJoined: 0, rankedVictories: 0, 
                 quests: { daily: { date: null, progress: {}, claimed: {} }, weekly: { week: null, progress: {}, claimed: {} } }, 
                 inventory: { eggs: 0, potions: [{ type: 'double_xp', quantity: 2 }, { type: 'golden_study', quantity: 1 }], pets: [] }, 
                 equippedPet: null, activePotion: null, 
-                dailyStats: { date: todayKey(), tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, tournamentsJoined: 0, comboMax: 0 }, 
-                weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, tournamentWins: 0 }, 
-                careerHistory: [], tournamentJoins: {}, tournamentProgress: {}, highestTitle: 0, highestTier: 'LT4', tierHistory: [], dailyXpLog: {}, 
+                dailyStats: { date: todayKey(), tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, rankedBattlesJoined: 0, comboMax: 0 }, 
+                weeklyStats: { week: weekKey(), tasks: 0, xp: 0, mockTests: 0, rankedWins: 0 }, 
+                careerHistory: [], activeRankedBattles: [], highestTitle: 0, highestTier: 'LT4', tierHistory: [], dailyXpLog: {}, 
                 customization: { frame:'default', color:'#c4b5fd', badge:'⭐', avatar:'🦊', motto:'Focus & Discipline', bio:'Aiming for the top.' }, 
                 lastSave: now, lastTick: now 
             }; 
@@ -289,7 +283,7 @@
                 const rng = mulberry32(hashStr(p.id));
                 aiState[p.id] = { 
                     xp: p.aiProfile.initialXP, 
-                    tp: p.aiProfile.initialTP, 
+                    rp: p.aiProfile.initialRP, 
                     energy: rand(rng, 0.7, 1.3), 
                     streak: randInt(rng, 0, 15), 
                     offUntil: 0, 
@@ -298,7 +292,7 @@
             } 
             const human = initHumanState(); 
             human.highestTitle = 0; 
-            return { version: STATE_VERSION, createdAt: Date.now(), lastTick: Date.now(), human, ai: aiState, profiles: {}, tournaments: {}, pendingResolutions: [] }; 
+            return { version: STATE_VERSION, createdAt: Date.now(), lastTick: Date.now(), human, ai: aiState, profiles: {}, pendingResolutions: [] }; 
         } 
 
         function loadState(catalog) { 
@@ -310,7 +304,6 @@
                 if (!s.human || !s.ai) return null; 
                 const defaults = initHumanState(); 
                 s.human = { ...defaults, ...s.human }; 
-                if (!s.tournaments) s.tournaments = {}; 
                 if (!s.profiles) s.profiles = {}; 
                 return s; 
             } catch (e) { 
@@ -347,76 +340,63 @@
         function potionBonus(human) { if (!human.activePotion) return { mult:1, comboDiscount:false }; const p = human.activePotion; if (Date.now() > p.expires) return { mult:1, comboDiscount:false }; if (p.type === 'double_xp') return { mult:2, comboDiscount:false }; if (p.type === 'golden_study') return { mult:1.5, comboDiscount:false }; if (p.type === 'combo_craze') return { mult:1, comboDiscount:true }; return { mult:1, comboDiscount:false }; } 
         function calcTaskXp(baseXp, human, taskType) { const comboMult = comboMultiplier(human.combo); const pb = petBonus(human); let petBonusVal = 0; if (pb.def) { if (pb.def.ab === 'xp_all') petBonusVal = pb.val; else if (pb.def.ab === 'xp_assign' && taskType === 'assignment') petBonusVal = pb.val; else if (pb.def.ab === 'xp_study' && taskType === 'study') petBonusVal = pb.val; else if (pb.def.ab === 'xp_recall' && taskType === 'study') petBonusVal = pb.val; else if (pb.def.ab === 'xp_mock' && taskType === 'mock') petBonusVal = pb.val; } const pBonus = potionBonus(human); return Math.max(1, Math.floor(baseXp * comboMult * (1 + petBonusVal) * pBonus.mult)); } 
 
-        // ============================================================ // TOURNAMENTS // ============================================================ 
-        function generateTournaments(fromDate, days) { 
-            const tours = {}; const start = new Date(fromDate); start.setHours(0,0,0,0); 
-            for (let d = 0; d < days; d++) { 
-                const day = new Date(start); day.setDate(day.getDate() + d); const dow = day.getDay(); const isSat = dow === 6; 
-                const slots = isSat ? [5, 8, 11, 14, 17] : [14, 15, 16, 17.5, 19]; const durs = [30, 45, 60, 45, 60]; 
-                for (let i = 0; i < 5; i++) { 
-                    const s = new Date(day); s.setHours(Math.floor(slots[i]), Math.round((slots[i]%1)*60), 0, 0); 
-                    const e = new Date(s.getTime() + durs[i]*60000); 
-                    tours[`d-${todayKey(day)}-${i}`] = { id:`d-${todayKey(day)}-${i}`, type:'daily', name: DAILY_NAMES[i], start: s.getTime(), end: e.getTime(), baseTP:5, resolved:false, results:null, winner:null }; 
-                } 
-                if (d % 2 === 0) { 
-                    const s = new Date(day); s.setHours(15, 0, 0, 0); 
-                    tours[`m-${todayKey(day)}`] = { id:`m-${todayKey(day)}`, type:'major', name: MAJOR_NAMES[Math.floor(d/2) % MAJOR_NAMES.length], start: s.getTime(), end: s.getTime()+180*60000, baseTP:50, resolved:false, results:null, winner:null }; 
-                } 
-                if (dow === 0) { 
-                    const s = new Date(day); s.setHours(18, 0, 0, 0); 
-                    tours[`w-${todayKey(day)}`] = { id:`w-${todayKey(day)}`, type:'weekly', name: WEEKLY_NAMES[Math.floor(d/7) % WEEKLY_NAMES.length], start: s.getTime(), end: s.getTime()+240*60000, baseTP:100, resolved:false, results:null, winner:null }; 
-                } 
-                if (day.getDate() === 1) { 
-                    const s = new Date(day); s.setHours(19, 0, 0, 0); 
-                    tours[`mo-${day.getFullYear()}-${day.getMonth()}`] = { id:`mo-${day.getFullYear()}-${day.getMonth()}`, type:'monthly', name: MONTHLY_NAMES[day.getMonth() % MONTHLY_NAMES.length], start: s.getTime(), end: s.getTime()+240*60000, baseTP:300, resolved:false, results:null, winner:null }; 
-                } 
-            } 
-            return tours; 
-        } 
-
-        function tpReward(base, n, rank) {
-            if (n <= 1) return base;
-            const fraction = (n - rank) / (n - 1); 
-            const raw = (fraction * 200 - 100) * (base / 50); 
-            return Math.round(raw * 100) / 100;
+        // ============================================================ // ELO RANKED BATTLE SYSTEM // ============================================================ 
+        function calculateEloTransfer(winnerRp, loserRp, K = 40) {
+            const P = 1 / (1 + Math.pow(10, (loserRp - winnerRp) / 400));
+            const transfer = Math.round(K * (1 - P));
+            return Math.max(1, transfer);
         }
 
-        const fmtSigned = n => (n >= 0 ? '+' : '') + n.toFixed(2);
+        const RANKED_SETTINGS = [
+            { id: 'quick', name: 'Quick', durationMs: 1 * 3600 * 1000, desc: '1 hour' },
+            { id: 'short', name: 'Short', durationMs: 2 * 3600 * 1000, desc: '2 hours' },
+            { id: 'medium', name: 'Medium', durationMs: 3 * 3600 * 1000, desc: '3 hours' },
+            { id: 'long', name: 'Long', durationMs: 4 * 3600 * 1000, desc: '4 hours' },
+            { id: 'extra', name: 'Extra', durationMs: 5 * 3600 * 1000, desc: '5 hours' },
+            { id: 'deadly', name: 'Deadly', durationMs: 6 * 3600 * 1000, desc: '6 hours' }
+        ];
 
-        function computeAIParticipants(t, catalog, state) { 
-            const seed = hashStr(t.id); 
-            const rng = mulberry32(seed); 
-            const durHours = (t.end - t.start) / 3600000; 
-            const results = []; 
-            for (const p of catalog) { 
-                if (p.id === 'human') continue; 
-                const prof = p.aiProfile; 
-                const aiData = state.ai[p.id];
-                if (aiData && aiData.retired) continue;
-                const joinChance = prof.joinTendency * (t.type === 'daily' ? 0.9 : t.type === 'major' ? 1.1 : t.type === 'weekly' ? 1.2 : 1.3); 
-                if (rng() < joinChance) { 
-                    const energy = aiData ? aiData.energy : 1.0;
-                    const baseXP = prof.dailyXpAvg * (durHours / 24) * 2.2 * energy; 
-                    const roll = 0.4 + rng() * (0.6 + prof.variability * 0.8); 
-                    const comp = prof.tournamentCompetitiveness || 1; 
-                    results.push({ pid: p.id, xp: Math.floor(baseXP * roll * comp) }); 
-                } 
-            } 
-            return results; 
-        } 
-
-        function computeRanking(t, catalog, hp, state) {
-            const p = computeAIParticipants(t, catalog, state);
-            if (typeof hp[t.id] === 'number') p.push({ pid: 'human', xp: hp[t.id] });
-            p.sort((a, b) => b.xp - a.xp || a.pid.localeCompare(b.pid));
-            return p.map((r, i) => ({ ...r, rank: i + 1, tp: tpReward(t.baseTP, p.length, i + 1) }));
+        function findClosestOpponent(myRp, catalog, aiState, rng) {
+            const candidates = catalog.filter(p => !p.isHuman && !aiState[p.id]?.retired);
+            if (candidates.length === 0) return catalog.find(p => !p.isHuman).id;
+            // Closest-rank matchmaking
+            candidates.sort((a, b) => Math.abs((aiState[a.id]?.rp || 1000) - myRp) - Math.abs((aiState[b.id]?.rp || 1000) - myRp));
+            const pool = candidates.slice(0, 5);
+            return pick(rng, pool).id;
         }
 
-        function resolveTournament(t, catalog, hp, ai, state) {
-            const all = computeRanking(t, catalog, hp, state);
-            if (ai) for (const r of all) if (ai[r.pid]) ai[r.pid].tp = Math.max(0, ai[r.pid].tp + r.tp);
-            const me = all.find(r => r.pid === 'human');
-            return { ...t, resolved: true, results: all.slice(0, 20), winner: all[0]?.pid, participantCount: all.length, humanTp: me ? me.tp : 0 };
+        function resolveRankedBattle(battle, state, catalog) {
+            const h = state.human;
+            const aiData = state.ai[battle.opponentId];
+            const aiRp = aiData ? aiData.rp : 1000;
+            const myRp = h.rp;
+
+            const rng = mulberry32(hashStr(battle.id + '_resolve'));
+            const pWin = 1 / (1 + Math.pow(10, (aiRp - myRp) / 400));
+            const roll = rng();
+            const playerWon = roll <= pWin;
+
+            const transfer = calculateEloTransfer(playerWon ? myRp : aiRp, playerWon ? aiRp : myRp, 40);
+
+            if (playerWon) {
+                h.rp = Math.max(0, h.rp + transfer);
+                if (aiData) aiData.rp = Math.max(0, aiData.rp - transfer);
+                h.rankedVictories += 1;
+                h.weeklyStats.rankedWins = (h.weeklyStats.rankedWins || 0) + 1;
+                h.careerHistory.push({ ts: Date.now(), type: 'ranked_win', note: `Won Ranked Battle vs ${getProfile(battle.opponentId, catalog, state).name}`, rp: transfer });
+            } else {
+                h.rp = Math.max(0, h.rp - transfer);
+                if (aiData) aiData.rp = Math.max(0, aiData.rp + transfer);
+                h.careerHistory.push({ ts: Date.now(), type: 'ranked_loss', note: `Lost Ranked Battle vs ${getProfile(battle.opponentId, catalog, state).name}`, rp: -transfer });
+            }
+
+            return {
+                ...battle,
+                resolved: true,
+                won: playerWon,
+                transfer,
+                opponentRpAfter: aiData ? aiData.rp : aiRp
+            };
         }
 
         // ============================================================ // ADVANCED AI SIMULATION // ============================================================ 
@@ -463,7 +443,27 @@
                     
                     const gain = pr.dailyXpAvg * (stepHours / 24) * actMul * varMul * cur.energy;
                     cur.xp += Math.max(0, gain);
-                    cur.tp += pr.dailyTpAvg * (stepHours / 24) * actMul * 0.3;
+
+                    // AI simulate periodic ranked battles against each other
+                    if (rng() < 0.05 * stepHours) {
+                        const opp = catalog.filter(x => x.id !== p.id && !x.isHuman && !state.ai[x.id]?.retired);
+                        if (opp.length > 0) {
+                            const o = pick(rng, opp);
+                            const oData = state.ai[o.id];
+                            if (oData) {
+                                const wP = 1 / (1 + Math.pow(10, (oData.rp - cur.rp) / 400));
+                                const pWon = rng() <= wP;
+                                const tr = calculateEloTransfer(pWon ? cur.rp : oData.rp, pWon ? oData.rp : cur.rp, 40);
+                                if (pWon) {
+                                    cur.rp = Math.max(0, cur.rp + tr);
+                                    oData.rp = Math.max(0, oData.rp - tr);
+                                } else {
+                                    cur.rp = Math.max(0, cur.rp - tr);
+                                    oData.rp = Math.max(0, oData.rp + tr);
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -498,41 +498,27 @@
             const now = Date.now(); 
             const elapsed = now - (state.lastTick || now); 
             state.lastTick = now; 
-            
-            const startDate = new Date(); startDate.setDate(startDate.getDate() - 2); 
-            const generated = generateTournaments(startDate, 8); 
-            for (const id in generated) if (!state.tournaments[id]) state.tournaments[id] = generated[id]; 
-            
-            for (const id in state.tournaments) { 
-                const t = state.tournaments[id]; 
-                if (!t.resolved && now > t.end) { 
-                    const resolved = resolveTournament(t, catalog, state.human.tournamentProgress, state.ai, state); 
-                    state.tournaments[id] = resolved; 
-                    const humanReward = resolved.humanTp || 0; 
-                    const participated = state.human.tournamentJoins[id]; 
-                    if (participated) { 
-                        if (humanReward) state.human.tp = Math.max(0, round2(state.human.tp + humanReward)); 
-                        if (resolved.winner === 'human') { 
-                            state.human.tournamentVictories += 1; 
-                            state.human.weeklyStats.tournamentWins = (state.human.weeklyStats.tournamentWins || 0) + 1; 
-                            state.human.careerHistory.push({ ts: now, type: 'tournament_win', note: `Won ${resolved.name}`, tp: humanReward }); 
-                        } else { 
-                            state.human.careerHistory.push({ ts: now, type: 'tournament', note: `${resolved.name}`, tp: humanReward }); 
-                        } 
-                    } 
-                } 
-            } 
+
+            // Check active ranked battles for human
+            if (state.human.activeRankedBattles) {
+                state.human.activeRankedBattles = state.human.activeRankedBattles.map(b => {
+                    if (!b.resolved && now >= b.endTime) {
+                        return resolveRankedBattle(b, state, catalog);
+                    }
+                    return b;
+                });
+            }
 
             if (elapsed > 0 || force) simulateAIsStep(state, catalog, elapsed); 
             
             const today = todayKey(); 
             if (state.human.dailyStats.date !== today) { 
-                state.human.dailyStats = { date: today, tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, tournamentsJoined: 0, comboMax: 0 }; 
+                state.human.dailyStats = { date: today, tasks: 0, xp: 0, pages: 0, problems: 0, defs: 0, mockTests: 0, rankedBattlesJoined: 0, comboMax: 0 }; 
                 state.human.quests.daily = { date: today, progress: {}, claimed: {} }; 
             } 
             const wk = weekKey(); 
             if (state.human.weeklyStats.week !== wk) { 
-                state.human.weeklyStats = { week: wk, tasks: 0, xp: 0, mockTests: 0, tournamentWins: 0 }; 
+                state.human.weeklyStats = { week: wk, tasks: 0, xp: 0, mockTests: 0, rankedWins: 0 }; 
                 state.human.quests.weekly = { week: wk, progress: {}, claimed: {} }; 
             } 
             
@@ -547,11 +533,9 @@
                 if (diffDays > 1) state.human.streak = 0; 
             } 
 
-            for (const id in state.tournaments) if (state.tournaments[id].end < now - 30*24*3600*1000) delete state.tournaments[id]; 
-            
-            const tpList = catalog.map(p => ({ id: p.id, tp: p.id === 'human' ? state.human.tp : (state.ai[p.id]?.tp ?? 0) })).sort((a,b) => b.tp - a.tp); 
-            const humanRankTP = tpList.findIndex(x => x.id === 'human') + 1; 
-            const newTier = computeTierForRank(humanRankTP); 
+            const rpList = catalog.map(p => ({ id: p.id, rp: p.id === 'human' ? state.human.rp : (state.ai[p.id]?.rp ?? 1000) })).sort((a,b) => b.rp - a.rp || a.id.localeCompare(b.id)); 
+            const humanRankRP = rpList.findIndex(x => x.id === 'human') + 1; 
+            const newTier = computeTierForRank(humanRankRP); 
             const tierOrder = { 'LT4':0,'HT4':1,'LT3':2,'HT3':3,'LT2':4,'HT2':5,'LT1':6,'HT1':7 }; 
             
             if (tierOrder[newTier] > tierOrder[state.human.highestTier]) { 
@@ -598,13 +582,6 @@
             } 
             h.lastTaskDay = today; 
             
-            for (const tid in state.tournaments) { 
-                const t = state.tournaments[tid]; 
-                if (t.resolved) continue; 
-                if (now < t.start || now > t.end) continue; 
-                if (!h.tournamentJoins[tid]) continue; 
-                h.tournamentProgress[tid] = (h.tournamentProgress[tid] || 0) + finalXp; 
-            } 
             h.dailyXpLog[today] = (h.dailyXpLog[today] || 0) + finalXp; 
             
             const d = h.quests.daily.progress, w = h.quests.weekly.progress; 
@@ -641,15 +618,38 @@
             return finalXp; 
         } 
 
-        function joinTournament(state, tournamentId) { 
-            const h = state.human; if (h.tournamentJoins[tournamentId]) return false; 
-            const t = state.tournaments[tournamentId]; if (!t || t.resolved) return false; 
-            if (Date.now() > t.end) return false; 
-            h.tournamentJoins[tournamentId] = true; h.tournamentsJoined += 1; 
-            h.dailyStats.tournamentsJoined = (h.dailyStats.tournamentsJoined||0)+1; 
-            h.tournamentProgress[tournamentId] = h.tournamentProgress[tournamentId] || 0; 
-            return true; 
-        } 
+        function startRankedBattle(state, catalog, settingId) {
+            const setting = RANKED_SETTINGS.find(s => s.id === settingId);
+            if (!setting) return false;
+            const now = Date.now();
+            const rng = mulberry32(now + Math.floor(Math.random()*1000));
+            const opponentId = findClosestOpponent(state.human.rp, catalog, state.ai, rng);
+
+            const newBattle = {
+                id: 'rb_' + now + '_' + Math.floor(Math.random()*1000),
+                settingId: setting.id,
+                settingName: setting.name,
+                durationMs: setting.durationMs,
+                startTime: now,
+                endTime: now + setting.durationMs,
+                opponentId,
+                resolved: false
+            };
+
+            if (!state.human.activeRankedBattles) state.human.activeRankedBattles = [];
+            state.human.activeRankedBattles.push(newBattle);
+            state.human.rankedBattlesJoined = (state.human.rankedBattlesJoined || 0) + 1;
+            state.human.dailyStats.rankedBattlesJoined = (state.human.dailyStats.rankedBattlesJoined || 0) + 1;
+            return true;
+        }
+
+        function claimRankedBattle(state, catalog, battleId) {
+            if (!state.human.activeRankedBattles) return false;
+            const b = state.human.activeRankedBattles.find(x => x.id === battleId);
+            if (!b || b.resolved || Date.now() < b.endTime) return false;
+            resolveRankedBattle(b, state, catalog);
+            return true;
+        }
 
         function hatchEgg(state) { 
             const h = state.human; if (h.inventory.eggs <= 0) return null; 
@@ -678,9 +678,9 @@
             rows.forEach((r, i) => { r.rank = i + 1; r.titleIdx = computeTitleIdx(r.xp); r.title = TITLES[r.titleIdx]; }); 
             return rows; 
         } 
-        function buildTPLeaderboard(state, catalog) { 
-            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, tp: p.id === 'human' ? state.human.tp : (state.ai[p.id]?.tp ?? 0) })); 
-            rows.sort((a,b) => b.tp - a.tp || a.id.localeCompare(b.id)); 
+        function buildRPLeaderboard(state, catalog) { 
+            const rows = catalog.map(p => ({ id: p.id, name: getProfile(p.id, catalog, state).name, username: p.username, nationality: p.nationality, vip: p.vip, vipTier: p.vipTier, rp: p.id === 'human' ? state.human.rp : (state.ai[p.id]?.rp ?? 1000) })); 
+            rows.sort((a,b) => b.rp - a.rp || a.id.localeCompare(b.id)); 
             rows.forEach((r, i) => { r.rank = i + 1; r.tier = computeTierForRank(r.rank); }); 
             return rows; 
         } 
@@ -766,23 +766,23 @@
         function SaveModal({ state, onExport, onImport, onClose }) { const fileRef = useRef(null); return ( <div className="ac-modal-bg" onClick={onClose}> <div className="ac-modal" onClick={e => e.stopPropagation()}> <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>💾 Save & Load</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 16, lineHeight: 1.6, padding: 12, background: S.bg2, borderRadius: 10, border: `1px solid ${S.border}` }}> <strong style={{ color: S.pink }}>Important:</strong> This game runs locally in your browser. If you clear your browser data, your progress will be lost. <strong style={{ color: S.lavender }}>Export your save file regularly</strong> to guarantee your progress is never lost. </div> <Card style={{ marginBottom: 12 }}> <div style={{ fontSize: 11, color: S.muted }}>LAST AUTO-SAVE</div> <div style={{ fontSize: 13, marginTop: 4 }}>{new Date(state.lastSave || state.createdAt || Date.now()).toLocaleString()}</div> <div style={{ fontSize: 11, color: S.muted, marginTop: 8 }}>GAME CREATED</div> <div style={{ fontSize: 13, marginTop: 4 }}>{new Date(state.createdAt).toLocaleString()}</div> </Card> <button className="ac-btn ac-btn-primary" style={{ width:'100%', marginBottom: 8 }} onClick={onExport}> ⬇ Download Save File </button> <button className="ac-btn" style={{ width:'100%', marginBottom: 8 }} onClick={() => fileRef.current?.click()}> ⬆ Load Save File </button> <input ref={fileRef} type="file" accept=".json,application/json" style={{ display:'none' }} onChange={e => { if (e.target.files?.[0]) onImport(e.target.files[0]); e.target.value = ''; }} /> <button className="ac-btn" style={{ width:'100%', marginTop: 8 }} onClick={onClose}>Close</button> </div> </div> ); } 
 
         // ============================================================ // WELCOME BACK MODAL // ============================================================ 
-        function WelcomeBack({ elapsedMs, onClose }) { return ( <div className="ac-modal-bg"> <div className="ac-modal" style={{ textAlign:'center' }}> <div style={{ fontSize: 56 }}>👋</div> <div style={{ fontSize: 22, fontWeight: 700, marginTop: 12 }}>Welcome back!</div> <div style={{ fontSize: 14, color: S.muted, marginTop: 12, lineHeight: 1.7 }}> You were away for <strong style={{ color: S.lavender }}>{fmtTime(elapsedMs)}</strong>. <br/>Your 999 AI competitors have kept studying with real daily rhythms. <br/>Any tournaments that ended in your absence have been resolved. </div> <button className="ac-btn ac-btn-primary" style={{ marginTop: 20, padding: '12px 32px' }} onClick={onClose}> Continue </button> </div> </div> ); } 
+        function WelcomeBack({ elapsedMs, onClose }) { return ( <div className="ac-modal-bg"> <div className="ac-modal" style={{ textAlign:'center' }}> <div style={{ fontSize: 56 }}>👋</div> <div style={{ fontSize: 22, fontWeight: 700, marginTop: 12 }}>Welcome back!</div> <div style={{ fontSize: 14, color: S.muted, marginTop: 12, lineHeight: 1.7 }}> You were away for <strong style={{ color: S.lavender }}>{fmtTime(elapsedMs)}</strong>. <br/>Your 999 AI competitors have kept studying and fighting ranked battles. <br/>Any active ranked battles that finished in your absence have been resolved. </div> <button className="ac-btn ac-btn-primary" style={{ marginTop: 20, padding: '12px 32px' }} onClick={onClose}> Continue </button> </div> </div> ); } 
 
         // ============================================================ // DASHBOARD // ============================================================ 
-        function Dashboard({ state, catalog, lbXP, lbTP, onNav, onOpenProfile }) { 
+        function Dashboard({ state, catalog, lbXP, lbRP, onNav, onOpenProfile }) { 
             const h = state.human; 
             const profile = getProfile('human', catalog, state);
             const titleIdx = computeTitleIdx(h.xp); 
             const xpRank = lbXP.find(r => r.id === 'human')?.rank || '?'; 
-            const tpRank = lbTP.find(r => r.id === 'human')?.rank || '?'; 
-            const currentTier = lbTP.find(r => r.id === 'human')?.tier || 'LT4'; 
+            const rpRank = lbRP.find(r => r.id === 'human')?.rank || '?'; 
+            const currentTier = lbRP.find(r => r.id === 'human')?.tier || 'LT4'; 
             const nextTitleIdx = Math.min(49, titleIdx + 1); 
             const curTitleXp = TITLE_XP[titleIdx]; 
             const nextTitleXp = TITLE_XP[nextTitleIdx]; 
             const comboMult = comboMultiplier(h.combo); 
             const equippedPet = h.inventory.pets.find(p => p.instanceId === h.equippedPet); 
             const activePot = h.activePotion && h.activePotion.expires > Date.now() ? h.activePotion : null; 
-            const upcoming = Object.values(state.tournaments).filter(t => !t.resolved && t.end > Date.now()).sort((a,b) => a.start - b.start).slice(0, 4); 
+            const activeRanked = (h.activeRankedBattles || []).filter(b => !b.resolved).slice(0, 3);
             
             return ( 
                 <div className="ac-fade"> 
@@ -807,15 +807,15 @@
                                     <div style={{ fontSize: 22, fontWeight: 800, color: S.lavender }}>#{xpRank}</div> 
                                 </div> 
                                 <div style={{ textAlign:'right' }}> 
-                                    <div style={{ fontSize: 11, color: S.muted, marginBottom: 2 }}>TP RANK</div> 
-                                    <div style={{ fontSize: 22, fontWeight: 800, color: S.gold }}>#{tpRank}</div> 
+                                    <div style={{ fontSize: 11, color: S.muted, marginBottom: 2 }}>RP RANK</div> 
+                                    <div style={{ fontSize: 22, fontWeight: 800, color: S.gold }}>#{rpRank}</div> 
                                 </div> 
                             </div> 
                         </div> 
                     </Card> 
                     <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: 16 }}> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>LIFETIME XP</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.lavender }}>{fmtInt(h.xp)}</div> <div style={{ marginTop: 8 }}> <ProgressBar value={h.xp - curTitleXp} max={nextTitleXp - curTitleXp} color={TITLE_COLORS[titleIdx].primary} /> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Next: {TITLES[nextTitleIdx]}</div> </div> </Card> 
-                        <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>LIFETIME TP</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.gold }}>{fmtTp(h.tp)}</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 8 }}>Tier: {currentTier}</div> </Card> 
+                        <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>RANKED POINTS (RP)</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.gold }}>{fmtInt(h.rp)}</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 8 }}>Tier: {currentTier}</div> </Card> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>COMBO</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.pink }}>{h.combo}×</div> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>{comboMult.toFixed(2)}× XP · Next in {10 - h.comboProgress}</div> {h.comboExpiry > 0 && <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>Expires: {fmtTime(h.comboExpiry - Date.now())}</div>} </Card> 
                         <Card> <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>STREAK</div> <div style={{ fontSize: 26, fontWeight: 800, color: S.mint }}>{h.streak} <span style={{ fontSize: 13, color: S.muted }}>days</span></div> <div style={{ fontSize: 10, color: S.muted, marginTop: 4 }}>Longest: {h.longestStreak}</div> </Card> 
                     </div> 
@@ -823,8 +823,8 @@
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>EQUIPPED PET</div> {equippedPet ? ( <div style={{ display:'flex', alignItems:'center', gap: 12 }}> <div className="ac-float" style={{ fontSize: 40 }}>{equippedPet.emoji}</div> <div> <div style={{ fontWeight: 700, fontSize: 15 }}>{equippedPet.petName}</div> <div style={{ fontSize: 11, marginTop: 2 }}><RarityPill rarity={equippedPet.rarity} /></div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Lv. {equippedPet.level} · +{(equippedPet.val * (1+0.05*(equippedPet.level-1))*100).toFixed(1)}% XP</div> </div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No pet equipped.</div>} </Card> 
                         <Card> <div style={{ fontSize: 12, color: S.muted, marginBottom: 8 }}>ACTIVE POTION</div> {activePot ? ( <div> <div style={{ fontSize: 14, fontWeight: 700 }}>{POTIONS[activePot.type].emoji} {POTIONS[activePot.type].name}</div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Expires in {fmtTime(activePot.expires - Date.now())}</div> </div> ) : <div style={{ color: S.muted, fontSize: 13 }}>No active potion.</div>} </Card> 
                     </div> 
-                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('othertasks')}>🧹 Other Tasks</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>🏆 Tournaments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
-                    <Section title="Upcoming Tournaments" right={<button className="ac-btn" onClick={() => onNav('tournaments')}>See all →</button>}> {upcoming.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No upcoming tournaments.</div> : ( <div className="ac-col"> {upcoming.map(t => { const isLive = Date.now() >= t.start && Date.now() <= t.end; const joined = !!h.tournamentJoins[t.id]; return ( <Card key={t.id} style={{ padding: 14 }}> <div className="ac-row" style={{ justifyContent:'space-between', flexWrap:'wrap', gap: 8 }}> <div> <div className="ac-row" style={{ gap: 8 }}> <span style={{ fontSize: 11, padding:'2px 8px', borderRadius: 6, background: t.type==='daily'?S.blue+'22':t.type==='major'?S.lavender+'22':t.type==='weekly'?S.pink+'22':S.gold+'22', color: t.type==='daily'?S.blue:t.type==='major'?S.lavender:t.type==='weekly'?S.pink:S.gold, fontWeight: 700, textTransform:'uppercase' }}>{t.type}</span> <span style={{ fontWeight: 700 }}>{t.name}</span> </div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>{isLive ? '🔴 LIVE NOW' : `Starts ${fmtTime12(t.start)}`} · {t.baseTP} TP base</div> </div> {joined ? <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>✓ Joined</span> : isLive && !t.resolved ? <button className="ac-btn ac-btn-primary" onClick={() => onNav('tournaments')}>Join</button> : null} </div> </Card> ); })} </div> )} </Section> 
+                    <Section title="Quick Actions"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))' }}> <button className="ac-btn ac-btn-primary" onClick={() => onNav('assignments')}>📐 Assignments</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('studying')}>📚 Studying</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('othertasks')}>🧹 Other Tasks</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('mocks')}>📝 Mock Tests</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('ranked')}>⚔️ Ranked Battles</button> <button className="ac-btn ac-btn-primary" onClick={() => onNav('inventory')}>🎒 Potions</button> </div> </Section> 
+                    <Section title="Active Ranked Battles" right={<button className="ac-btn" onClick={() => onNav('ranked')}>View all →</button>}> {activeRanked.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No active ranked battles. Enter the Arena!</div> : ( <div className="ac-col"> {activeRanked.map(b => { const opp = getProfile(b.opponentId, catalog, state); const ready = Date.now() >= b.endTime; return ( <Card key={b.id} style={{ padding: 14 }}> <div className="ac-row" style={{ justifyContent:'space-between', flexWrap:'wrap', gap: 8 }}> <div> <div className="ac-row" style={{ gap: 8 }}> <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{b.settingName}</span> <span style={{ fontWeight: 700 }}>vs {opp.name}</span> </div> <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>{ready ? '⚔️ Battle finished! Claim your RP results.' : `⏱️ Finishing in ${fmtTime(b.endTime - Date.now())}`}</div> </div> {ready && <button className="ac-btn ac-btn-primary" onClick={() => onNav('ranked')}>Claim Result</button>} </div> </Card> ); })} </div> )} </Section> 
                 </div> 
             ); 
         } 
@@ -882,114 +882,93 @@
 
         function MockTestsTab({ state, onComplete, toast }) { const h = state.human; const [active, setActive] = useState(null); const [questions, setQuestions] = useState([]); const [answers, setAnswers] = useState({}); const [submitted, setSubmitted] = useState(false); const [score, setScore] = useState(null); const start = (test) => { const rng = mulberry32(Math.floor(Math.random()*1e9)); setQuestions(shuffle(MOCK_BANK, rng).slice(0, test.questions)); setAnswers({}); setSubmitted(false); setScore(null); setActive(test); }; const submit = () => { let correct = 0; questions.forEach((q, i) => { if (answers[i] === q.a) correct += 1; }); const pct = correct / questions.length; setScore({ correct, total: questions.length, pct }); setSubmitted(true); if (pct > 0.8) { const xp = onComplete('mock', active.id, active.xp, { score: pct }); toast(`+${xp} XP · Mock Test passed (${Math.round(pct*100)}%)`); } else toast(`Score ${Math.round(pct*100)}% — need >80%.`); }; return ( <div className="ac-fade"> <Section title="Mock Tests" sub="Score strictly above 80% to earn XP"> <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))' }}> {MOCK_TESTS.map(t => ( <Card key={t.id}> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}> <div style={{ fontSize: 28 }}>📝</div> <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{t.xp} XP</span> </div> <div style={{ fontWeight: 700, marginBottom: 4 }}>{t.name}</div> <div style={{ fontSize: 12, color: S.muted, marginBottom: 12 }}>{t.desc}</div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => start(t)}>Begin Test</button> </Card> ))} </div> </Section> {active && ( <div className="ac-modal-bg"> <div className="ac-modal"> <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 12 }}> <div style={{ fontSize: 18, fontWeight: 700 }}>{active.name}</div> {!submitted && <button className="ac-btn" onClick={() => setActive(null)}>Exit</button>} </div> {!submitted ? ( <div> {questions.map((q, i) => ( <div key={i} style={{ marginBottom: 18 }}> <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{i+1}. {q.q}</div> <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr' }}> {q.opts.map((opt, oi) => ( <button key={oi} className="ac-btn" style={{ textAlign:'left', padding:'8px 10px', fontSize: 12, background: answers[i]===oi?S.lavender+'22':S.panel2, borderColor: answers[i]===oi?S.lavender:S.border }} onClick={() => setAnswers({...answers, [i]: oi})}> {String.fromCharCode(65+oi)}. {opt} </button> ))} </div> </div> ))} <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={submit}> Submit ({Object.keys(answers).length}/{questions.length}) </button> </div> ) : ( <div style={{ textAlign:'center', padding: 16 }}> <div style={{ fontSize: 36, marginBottom: 12 }}>{score.pct > 0.8 ? '🏆' : '📖'}</div> <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{score.correct}/{score.total} ({Math.round(score.pct*100)}%)</div> <div style={{ fontSize: 14, color: score.pct > 0.8 ? S.success : S.danger, fontWeight: 600, marginBottom: 16 }}> {score.pct > 0.8 ? `Passed! +${calcTaskXp(active.xp, h, 'mock')} XP` : 'Failed — need >80%.'} </div> <button className="ac-btn ac-btn-primary" style={{ width: '100%' }} onClick={() => setActive(null)}>Close</button> </div> )} </div> </div> )} </div> ); } 
 
-        // ============================================================ // TOURNAMENTS // ============================================================ 
-        function TournamentBoard({ t, state, catalog, onClose, onOpenProfile }) {
-          const [q, setQ] = useState(''), [page, setPage] = useState(0);
-          const h = state.human, now = Date.now(), live = !t.resolved && now <= t.end;
-          let rows;
-          if (live) {
-            const f = clamp((now - t.start) / (t.end - t.start), 0, 1);
-            const e = computeAIParticipants(t, catalog, state).map(a => ({ pid: a.pid, xp: Math.floor(a.xp * f) }));
-            if (h.tournamentJoins[t.id]) e.push({ pid: 'human', xp: h.tournamentProgress[t.id] || 0 });
-            e.sort((a, b) => b.xp - a.xp || a.pid.localeCompare(b.pid));
-            rows = e.map((r, i) => ({ ...r, rank: i + 1, tp: tpReward(t.baseTP, e.length, i + 1) }));
-          } else rows = computeRanking(t, catalog, h.tournamentProgress, state);
-          const s = q.trim().toLowerCase();
-          const list = s ? rows.filter(r => getProfile(r.pid, catalog, state).name.toLowerCase().includes(s)) : rows;
-          const pages = Math.max(1, Math.ceil(list.length / 50)), pg = Math.min(page, pages - 1);
-          const me = rows.find(r => r.pid === 'human');
-          return (
-            <div className="ac-modal-bg" onClick={onClose}>
-              <div className="ac-modal" style={{ maxWidth: 680 }} onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div><div style={{ fontSize: 18, fontWeight: 700 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: S.muted }}>{rows.length} players · {live ? 'live, projected TP' : 'final'}</div></div>
-                  <button className="ac-btn" onClick={onClose}>✕</button>
-                </div>
-                <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-                  <input className="ac-input" placeholder="Search player…" value={q} onChange={e => { setQ(e.target.value); setPage(0); }} />
-                  {me && <button className="ac-btn" onClick={() => { setQ(''); setPage(Math.floor((me.rank - 1) / 50)); }}>Me</button>}
-                </div>
-                {list.slice(pg * 50, pg * 50 + 50).map(r => { const p = getProfile(r.pid, catalog, state), you = r.pid === 'human'; return (
-                  <div key={r.pid} style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto auto', gap: 10, padding: '7px 4px', fontSize: 12, borderBottom: `1px solid ${S.border}`, color: you ? S.mint : S.text, alignItems:'center' }}>
-                    <span style={{ color: S.muted }}>#{r.rank}</span>
-                    <span style={{ cursor:'pointer', fontWeight: 600 }} onClick={() => onOpenProfile(r.pid)}>{p.name} {p.vip && <VIPBadge small />} {you && <YouBadge small />}</span>
-                    <span style={{ color: S.lavender }}>{fmtInt(r.xp)} XP</span>
-                    <span style={{ minWidth: 52, textAlign: 'right', color: r.tp > 0 ? S.gold : r.tp < 0 ? S.danger : S.muted }}>{fmtSigned(r.tp)}</span>
-                  </div>); })}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                  <button className="ac-btn" disabled={pg === 0} onClick={() => setPage(pg - 1)}>←</button>
-                  <span style={{ fontSize: 12, color: S.muted }}>Page {pg + 1} / {pages}</span>
-                  <button className="ac-btn" disabled={pg >= pages - 1} onClick={() => setPage(pg + 1)}>→</button>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        function TournamentsTab({ state, catalog, onJoin, toast, onOpenProfile }) { 
-            const h = state.human; const [filter, setFilter] = useState('all'); const [view, setView] = useState(null); const now = Date.now(); 
-            const all = Object.values(state.tournaments).sort((a,b) => a.start - b.start); 
-            const upcoming = all.filter(t => !t.resolved && t.start > now); 
-            const live = all.filter(t => !t.resolved && t.start <= now && t.end >= now); 
-            const past = all.filter(t => t.resolved || t.end < now).sort((a,b) => b.end - a.end); 
-            const filtered = filter === 'live' ? live : filter === 'upcoming' ? upcoming : filter === 'past' ? past : [...live, ...upcoming]; 
-            const handleJoin = (t) => { if (onJoin(t.id)) toast(`Joined ${t.name}!`); else toast('Cannot join.'); }; 
-            
-            const renderTournament = (t) => { 
-                const isLive = now >= t.start && now <= t.end; 
-                const isPast = t.resolved || t.end < now; 
-                const joined = !!h.tournamentJoins[t.id]; 
-                const humanProgress = h.tournamentProgress[t.id] || 0; 
-                let liveBoard = null; 
-                if (isLive && !t.resolved) { 
-                    const ais = computeAIParticipants(t, catalog, state); 
-                    const elapsedFrac = clamp((now - t.start) / (t.end - t.start), 0, 1); 
-                    const entries = ais.map(a => ({ pid: a.pid, xp: Math.floor(a.xp * elapsedFrac) })); 
-                    if (joined) entries.push({ pid: 'human', xp: humanProgress }); 
-                    entries.sort((a,b) => b.xp - a.xp || a.pid.localeCompare(b.pid)); 
-                    liveBoard = entries.slice(0, 10); 
-                } 
-                return ( 
-                    <Card key={t.id} style={{ marginBottom: 10 }}> 
-                        <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap: 12, marginBottom: 10 }}> 
-                            <div> 
-                                <div style={{ display:'flex', gap: 8, alignItems:'center', flexWrap:'wrap' }}> 
-                                    <span style={{ fontSize: 10, padding:'2px 8px', borderRadius: 6, background: t.type==='daily'?S.blue+'22':t.type==='major'?S.lavender+'22':t.type==='weekly'?S.pink+'22':S.gold+'22', color: t.type==='daily'?S.blue:t.type==='major'?S.lavender:t.type==='weekly'?S.pink:S.gold, fontWeight: 800, textTransform:'uppercase' }}>{t.type}</span> 
-                                    <span style={{ fontWeight: 700, fontSize: 15 }}>{t.name}</span> 
-                                    {isLive && <span className="ac-pill ac-live" style={{ background: S.danger+'22', color: S.danger }}>🔴 LIVE</span>} 
-                                    {isPast && <span className="ac-pill" style={{ background: S.muted+'22', color: S.muted }}>ENDED</span>} 
-                                    {joined && !isPast && <span className="ac-pill" style={{ background: S.mint+'22', color: S.mint }}>✓ JOINED</span>} 
-                                </div> 
-                                <div style={{ fontSize: 11, color: S.muted, marginTop: 6 }}> {isPast ? `Ended ${fmtTime12(t.end)}` : `${fmtTime12(t.start)} – ${fmtTime12(t.end)}`} · Base: {t.baseTP} TP </div> 
-                                {isLive && <div style={{ fontSize: 11, color: S.gold, marginTop: 4 }}>⏱ {fmtTime(t.end - now)} remaining</div>} 
-                            </div> 
-                            <div> 
-                                {!isPast && !joined && <button className="ac-btn ac-btn-primary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => handleJoin(t)}>Join</button>} 
-                                {isPast && t.winner && <div style={{ fontSize: 11, color: S.gold, cursor:'pointer' }} onClick={() => onOpenProfile(t.winner)}>🏆 {getProfile(t.winner, catalog, state).name}</div>} 
-                            </div> 
-                        </div> 
-                        {isLive && liveBoard && ( 
-                            <div style={{ marginTop: 12, padding: 12, background: S.bg2, borderRadius: 10 }}> 
-                                <div style={{ fontSize: 11, color: S.muted, marginBottom: 8, fontWeight: 600 }}>LIVE LEADERBOARD <button className="ac-btn" style={{ float: 'right', padding: '3px 10px', fontSize: 11 }} onClick={() => setView(t)}>View all</button></div> 
-                                {liveBoard.map((e, i) => { const p = getProfile(e.pid, catalog, state); return ( <div key={e.pid} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', fontSize: 12, color: e.pid==='human'?S.mint:S.text }}> <span style={{ cursor:'pointer' }} onClick={() => onOpenProfile(e.pid)}>#{i+1} {p.name}{p.vip && <span style={{ marginLeft: 6 }}><VIPBadge small /></span>}{e.pid==='human' && <span style={{ marginLeft: 6 }}><YouBadge small /></span>}</span> <span style={{ color: S.lavender, fontWeight: 600 }}>{fmtInt(e.xp)} XP</span> </div> ); })} 
-                            </div> 
-                        )} 
-                        {isPast && t.results && t.results.length > 0 && ( 
-                            <div style={{ marginTop: 12, padding: 12, background: S.bg2, borderRadius: 10 }}> 
-                                <div style={{ fontSize: 11, color: S.muted, marginBottom: 8, fontWeight: 600 }}>TOP PLACEMENTS <button className="ac-btn" style={{ float: 'right', padding: '3px 10px', fontSize: 11 }} onClick={() => setView(t)}>View all</button></div> 
-                                {t.results.slice(0, 5).map((r, i) => { const p = getProfile(r.pid, catalog, state); return ( <div key={r.pid} style={{ display:'flex', justifyContent:'space-between', padding:'3px 0', fontSize: 12 }}> <span style={{ cursor:'pointer' }} onClick={() => onOpenProfile(r.pid)}>#{i+1} {p.name}{p.vip && <span style={{ marginLeft: 6 }}><VIPBadge small /></span>}{r.pid==='human' && <span style={{ marginLeft: 6 }}><YouBadge small /></span>}</span> <span><span style={{ color: S.lavender }}>{fmtInt(r.xp)} XP</span> · <span style={{ color: r.tp > 0 ? S.gold : r.tp < 0 ? S.danger : S.muted }}>{fmtSigned(r.tp)} TP</span></span> </div> ); })} 
-                            </div> 
-                        )} 
-                    </Card> 
-                ); 
-            }; 
+        // ============================================================ // RANKED TAB (SEASON RISE) // ============================================================ 
+        function RankedTab({ state, catalog, onStartBattle, onClaimBattle, toast, onOpenProfile }) { 
+            const h = state.human; 
+            const now = Date.now(); 
+            const activeBattles = h.activeRankedBattles || []; 
 
             return ( 
                 <div className="ac-fade"> 
-                    {view && <TournamentBoard t={view} state={state} catalog={catalog} onClose={() => setView(null)} onOpenProfile={onOpenProfile} />} 
-                    <Section title="Tournaments" sub="Compete for Tournament Points" right={ <div className="ac-row" style={{ gap: 6 }}> {['all','live','upcoming','past'].map(f => ( <button key={f} className={`ac-tab ${filter===f?'active':''}`} onClick={() => setFilter(f)} style={{ padding:'6px 12px', fontSize: 12 }}>{f.charAt(0).toUpperCase()+f.slice(1)}</button> ))} </div> }> 
-                        <div className="ac-col"> {filtered.length === 0 ? <Card><div style={{ color: S.muted, fontSize: 13 }}>No tournaments here.</div></Card> : filtered.map(renderTournament)} </div> 
+                    <Card style={{ background: `linear-gradient(135deg, ${S.panel} 0%, ${S.panel2} 100%)`, border: `1px solid ${S.borderL}`, marginBottom: 20, textAlign:'center', padding: 24 }}> 
+                        <div style={{ fontSize: 12, letterSpacing: '2px', color: S.gold, fontWeight: 800, marginBottom: 4 }}>SEASON RISE</div> 
+                        <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>“The dying realize what they have to do.”</div> 
+                        <div style={{ fontSize: 13, color: S.muted, maxWidth: 600, margin:'0 auto' }}> 
+                            Enter ranked battles against the 1,000 players of Academia. Win matches to gain RP via ELO rating transfer. Defeat stronger opponents to climb the leaderboard! 
+                        </div> 
+                    </Card> 
+
+                    <Section title="Ranked Battle Settings" sub="Select a time duration to queue up for an ELO-rated ranked battle"> 
+                        <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: 24 }}> 
+                            {RANKED_SETTINGS.map(set => ( 
+                                <Card key={set.id} style={{ display:'flex', flexDirection:'column', justifyContent:'space-between' }}> 
+                                    <div> 
+                                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 8 }}> 
+                                            <span style={{ fontSize: 16, fontWeight: 700 }}>{set.name}</span> 
+                                            <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{set.desc}</span> 
+                                        </div> 
+                                        <div style={{ fontSize: 12, color: S.muted, marginBottom: 16 }}> 
+                                            Standard ELO matchmaking vs closest rank. Multiplier: ×1.0
+                                        </div> 
+                                    </div> 
+                                    <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={() => { if (onStartBattle(set.id)) toast(`Started ${set.name} Ranked Battle!`); else toast('Cannot start battle.'); }}> 
+                                        ⚔️ Start {set.name} Battle 
+                                    </button> 
+                                </Card> 
+                            ))} 
+                        </div> 
+                    </Section> 
+
+                    <Section title="Active & Recent Ranked Battles"> 
+                        {activeBattles.length === 0 ? ( 
+                            <Card><div style={{ color: S.muted, fontSize: 13, textAlign:'center', padding: 12 }}>No active ranked battles. Choose a duration above to enter the arena!</div></Card> 
+                        ) : ( 
+                            <div className="ac-col"> 
+                                {activeBattles.slice().reverse().map(b => { 
+                                    const ready = !b.resolved && now >= b.endTime; 
+                                    const opp = getProfile(b.opponentId, catalog, state); 
+                                    return ( 
+                                        <Card key={b.id}> 
+                                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}> 
+                                                <div> 
+                                                    <div style={{ display:'flex', gap: 8, alignItems:'center' }}> 
+                                                        <span className="ac-pill" style={{ background: S.gold+'22', color: S.gold }}>{b.settingName}</span> 
+                                                        <span style={{ fontWeight: 700, cursor:'pointer' }} onClick={() => onOpenProfile(b.opponentId)}>vs {opp.name}</span> 
+                                                        {opp.vip && <VIPBadge small />} 
+                                                    </div> 
+                                                    <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}> 
+                                                        {b.resolved ? ( 
+                                                            <span style={{ color: b.won ? S.success : S.danger, fontWeight: 600 }}> 
+                                                                {b.won ? `Victory! +${b.transfer} RP` : `Defeat! -${b.transfer} RP`} 
+                                                            </span> 
+                                                        ) : ready ? ( 
+                                                            <span style={{ color: S.gold, fontWeight: 600 }}>Battle complete! Ready to claim.</span> 
+                                                        ) : ( 
+                                                            <span>⏱️ Time remaining: {fmtTime(b.endTime - now)}</span> 
+                                                        )} 
+                                                    </div> 
+                                                </div> 
+                                                <div> 
+                                                    {!b.resolved && ready && ( 
+                                                        <button className="ac-btn ac-btn-primary" onClick={() => { if (onClaimBattle(b.id)) { toast(b.won ? `Victory! RP gained!` : `Defeat! RP lost.`); } }}> 
+                                                            Claim Result 
+                                                        </button> 
+                                                    )} 
+                                                    {!b.resolved && !ready && ( 
+                                                        <span className="ac-pill ac-live" style={{ background: S.blue+'22', color: S.blue }}>In Progress</span> 
+                                                    )} 
+                                                    {b.resolved && ( 
+                                                        <span className="ac-pill" style={{ background: b.won ? S.mint+'22' : S.danger+'22', color: b.won ? S.mint : S.danger }}> 
+                                                            {b.won ? 'Won' : 'Lost'} 
+                                                        </span> 
+                                                    )} 
+                                                </div> 
+                                            </div> 
+                                        </Card> 
+                                    ); 
+                                })} 
+                            </div> 
+                        )} 
                     </Section> 
                 </div> 
             ); 
@@ -1034,9 +1013,9 @@
         } 
 
         // ============================================================ // LEADERBOARD // ============================================================ 
-        function LeaderboardTab({ state, catalog, lbXP, lbTP, onOpenProfile }) { 
+        function LeaderboardTab({ state, catalog, lbXP, lbRP, onOpenProfile }) { 
             const [mode, setMode] = useState('xp'); const [search, setSearch] = useState(''); const [natFilter, setNatFilter] = useState('all'); const [vipFilter, setVipFilter] = useState(false); const [page, setPage] = useState(0); 
-            const pageSize = 50; const lb = mode === 'xp' ? lbXP : lbTP; 
+            const pageSize = 50; const lb = mode === 'xp' ? lbXP : lbRP; 
             const filtered = useMemo(() => { 
                 let rows = lb; 
                 if (search.trim()) { 
@@ -1056,7 +1035,7 @@
                     <Section title="Leaderboards" sub="All 1000 competitors"> 
                         <div style={{ display:'flex', gap: 8, marginBottom: 14 }}> 
                             <button className={`ac-tab ${mode==='xp'?'active':''}`} onClick={() => { setMode('xp'); setPage(0); }}>📈 Experience</button> 
-                            <button className={`ac-tab ${mode==='tp'?'active':''}`} onClick={() => { setMode('tp'); setPage(0); }}>🏆 Efficiency</button> 
+                            <button className={`ac-tab ${mode==='rp'?'active':''}`} onClick={() => { setMode('rp'); setPage(0); }}>⚔️ Ranked Points (RP)</button> 
                         </div> 
                         <div style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap: 8, marginBottom: 14 }}> 
                             <input className="ac-input" placeholder="Search name or username..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} /> 
@@ -1066,7 +1045,7 @@
                             </select> 
                             <button className={`ac-btn ${vipFilter?'ac-btn-primary':''}`} onClick={() => { setVipFilter(!vipFilter); setPage(0); }}>VIP</button> 
                         </div> 
-                        {humanRank && <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>Your {mode === 'xp' ? 'XP' : 'TP'} rank: <strong style={{ color: mode==='xp'?S.lavender:S.gold }}>#{humanRank}</strong> of 1000</div>} 
+                        {humanRank && <div style={{ fontSize: 12, color: S.muted, marginBottom: 10 }}>Your {mode === 'xp' ? 'XP' : 'RP'} rank: <strong style={{ color: mode==='xp'?S.lavender:S.gold }}>#{humanRank}</strong> of 1000</div>} 
                         <Card style={{ padding: 0, overflow:'hidden' }}> 
                             <div style={{ maxHeight: 600, overflowY:'auto' }}> 
                                 {visible.length === 0 ? <div style={{ padding: 24, textAlign:'center', color: S.muted }}>No results.</div> : visible.map(r => { 
@@ -1083,7 +1062,7 @@
                                                 <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>@{r.username} · {r.nationality}</div> 
                                             </div> 
                                             <div style={{ fontSize: 11, color: mode==='xp'?S.lavender:S.gold, fontWeight: 700, textAlign:'right' }}> {mode === 'xp' ? r.title : r.tier} </div> 
-                                            <div style={{ fontSize: 13, fontWeight: 700, textAlign:'right', color: mode==='xp'?S.lavender:S.gold }}> {mode === 'xp' ? fmtShort(r.xp) : fmtTp(r.tp)} </div> 
+                                            <div style={{ fontSize: 13, fontWeight: 700, textAlign:'right', color: mode==='xp'?S.lavender:S.gold }}> {mode === 'xp' ? fmtShort(r.xp) : fmtInt(r.rp)} </div> 
                                         </div> 
                                     ); 
                                 })} 
@@ -1100,13 +1079,13 @@
         } 
 
         // ============================================================ // TITLES & TIERS TAB // ============================================================ 
-        function TitlesTab({ state, lbTP }) { 
+        function TitlesTab({ state, lbRP }) { 
             const h = state.human, [sub, setSub] = useState('titles'); 
-            const ti = computeTitleIdx(h.xp), cur = lbTP.find(r => r.id === 'human')?.tier || 'LT4', best = TIER_ORDER.indexOf(h.highestTier); 
+            const ti = computeTitleIdx(h.xp), cur = lbRP.find(r => r.id === 'human')?.tier || 'LT4', best = TIER_ORDER.indexOf(h.highestTier); 
             const rwText = rw => { const c = {}; (rw.potions || []).forEach(p => c[p] = (c[p] || 0) + 1); const out = []; if (rw.eggs) out.push('🥚 ' + rw.eggs + (rw.eggs > 1 ? ' eggs' : ' egg')); Object.entries(c).forEach(([k, v]) => out.push(v + '× ' + POTIONS[k].emoji + ' ' + POTIONS[k].name)); return out.join(' · ') || 'No reward (starting tier)'; }; 
             return ( 
                 <div className="ac-fade"> 
-                    <Section title="Titles & Tiers" sub="Titles come from lifetime XP, tiers from your TP rank. Rewards are granted the first time you reach each one."> 
+                    <Section title="Titles & Tiers" sub="Titles come from lifetime XP, tiers from your RP rank. Rewards are granted the first time you reach each one."> 
                         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}> 
                             {[['titles', '⭐ Titles (50)'], ['tiers', '🏅 Tiers (8)']].map(([k, l]) => <button key={k} className={`ac-tab ${sub === k ? 'active' : ''}`} onClick={() => setSub(k)}>{l}</button>)} 
                         </div> 
@@ -1125,7 +1104,7 @@
                                 {TIER_ORDER.slice().reverse().map(tn => { const o = TIER_ORDER.indexOf(tn), c = TIER_INFO[tn].color; return ( 
                                     <Card key={tn} style={{ borderColor: tn === cur ? c : S.border }}> 
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}> 
-                                            <div><span className="ac-pill" style={{ background: c + '22', color: c }}>{tn}</span><span style={{ fontSize: 12, color: S.muted, marginLeft: 8 }}>TP rank {TIER_RANGES[tn]}</span></div> 
+                                            <div><span className="ac-pill" style={{ background: c + '22', color: c }}>{tn}</span><span style={{ fontSize: 12, color: S.muted, marginLeft: 8 }}>RP rank {TIER_RANGES[tn]}</span></div> 
                                             <span style={{ fontSize: 11, color: o <= best ? S.mint : S.muted }}>{tn === cur ? 'Current' : o <= best ? '✓ Earned' : 'Locked'}</span> 
                                         </div> 
                                         <div style={{ fontSize: 12, marginTop: 8 }}>{rwText(TIER_REWARDS[tn])}</div> 
@@ -1240,13 +1219,13 @@
             const activePot = h.activePotion && h.activePotion.expires > Date.now() ? h.activePotion : null; 
             return ( 
                 <div className="ac-fade"> 
-                    <Section title="Inventory & Potions" sub="Boost your academic efficiency with powerful potions"> 
+                    <Section title="Inventory & Potions" sub="Spend Ranked Points (RP) to acquire advanced elixirs"> 
                         <Card style={{ marginBottom: 16 }}> 
                             <div style={{ display:'flex', gap: 16, flexWrap:'wrap', alignItems:'center' }}> 
                                 <div>🥚 <strong>{h.inventory.eggs}</strong> Eggs</div> 
                                 <div>🐾 <strong>{h.inventory.pets.length}</strong> Pets</div> 
                                 <div>🧪 <strong>{h.inventory.potions.reduce((s,p)=>s+p.quantity,0)}</strong> Potions</div> 
-                                <div>🏆 <strong>{fmtTp(h.tp)}</strong> TP Available</div> 
+                                <div>⚔️ <strong>{fmtInt(h.rp)}</strong> RP Available</div> 
                             </div> 
                         </Card> 
                         {activePot && ( 
@@ -1271,7 +1250,7 @@
                                 </div> 
                             )} 
                         </Section> 
-                        <Section title="Potion Market" sub="Spend Tournament Points (TP) to acquire advanced elixirs"> 
+                        <Section title="Potion Market" sub="Spend Ranked Points (RP) to acquire advanced elixirs"> 
                             <div className="ac-grid" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))' }}> 
                                 {Object.entries(POTIONS).map(([type, def]) => ( 
                                     <Card key={type}> 
@@ -1279,8 +1258,8 @@
                                         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{def.name}</div> 
                                         <div style={{ fontSize: 12, color: S.muted, marginBottom: 12, minHeight: 36 }}>{def.desc}</div> 
                                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}> 
-                                            <span style={{ color: S.gold, fontWeight: 700 }}>{def.cost} TP</span> 
-                                            <button className="ac-btn ac-btn-primary" style={{ padding:'6px 14px', fontSize: 12 }} disabled={h.tp < def.cost} onClick={() => { onBuyPotion(type); toast(`Purchased ${def.name}!`); }}>Purchase</button> 
+                                            <span style={{ color: S.gold, fontWeight: 700 }}>{def.cost} RP</span> 
+                                            <button className="ac-btn ac-btn-primary" style={{ padding:'6px 14px', fontSize: 12 }} disabled={h.rp < def.cost} onClick={() => { onBuyPotion(type); toast(`Purchased ${def.name}!`); }}>Purchase</button> 
                                         </div> 
                                     </Card> 
                                 ))} 
@@ -1292,7 +1271,7 @@
         } 
 
         // ============================================================ // UNIVERSAL PROFILE MODAL // ============================================================ 
-        function ProfileModal({ playerId, state, catalog, lbXP, lbTP, onClose, onSaveProfile }) { 
+        function ProfileModal({ playerId, state, catalog, lbXP, lbRP, onClose, onSaveProfile }) { 
             const isHuman = playerId === 'human'; 
             const baseProfile = getProfile(playerId, catalog, state); 
             const [name, setName] = useState(baseProfile.name); 
@@ -1303,12 +1282,12 @@
             const [favSubject, setFavSubject] = useState(baseProfile.favSubject || 'Mathematics'); 
             
             const xp = isHuman ? state.human.xp : (state.ai[playerId]?.xp || 0); 
-            const tp = isHuman ? state.human.tp : (state.ai[playerId]?.tp || 0); 
+            const rp = isHuman ? state.human.rp : (state.ai[playerId]?.rp || 1000); 
             const titleIdx = computeTitleIdx(xp); 
             
             const xpRank = lbXP.find(r => r.id === playerId)?.rank || '?'; 
-            const tpRank = lbTP.find(r => r.id === playerId)?.rank || '?'; 
-            const tier = computeTierForRank(tpRank); 
+            const rpRank = lbRP.find(r => r.id === playerId)?.rank || '?'; 
+            const tier = computeTierForRank(rpRank); 
 
             const save = () => {
                 if (!name.trim() || !username.trim()) return;
@@ -1329,295 +1308,4 @@
                                 <div className="ac-col" style={{ gap: 8, marginTop: 8 }}> 
                                     <input className="ac-input" value={name} onChange={e => setName(e.target.value)} placeholder="Display Name" maxLength={30} /> 
                                     <input className="ac-input" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" maxLength={20} /> 
-                                    <input className="ac-input" value={motto} onChange={e => setMotto(e.target.value)} placeholder="Motto / Tagline" maxLength={50} /> 
-                                    <textarea className="ac-input" value={bio} onChange={e => setBio(e.target.value)} placeholder="Short Bio" maxLength={200} style={{ resize:'none', height: 60 }} /> 
-                                    <div style={{ display:'flex', gap: 8, justifyContent:'center', marginTop: 8 }}> 
-                                        {AVATARS.map(av => ( 
-                                            <button key={av} className={`ac-btn ${avatar===av?'ac-btn-primary':''}`} style={{ fontSize: 20, padding: 8 }} onClick={() => setAvatar(av)}>{av}</button> 
-                                        ))} 
-                                    </div> 
-                                </div> 
-                            ) : ( 
-                                <div> 
-                                    <div style={{ fontSize: 20, fontWeight: 700 }}>{baseProfile.name} {baseProfile.vip && <VIPBadge />}</div> 
-                                    <div style={{ fontSize: 12, color: S.muted }}>@{baseProfile.username} · {baseProfile.nationality}</div> 
-                                    <div style={{ fontSize: 13, fontStyle:'italic', marginTop: 6, color: S.lavender }}>“{baseProfile.motto || baseProfile.bio}”</div> 
-                                </div> 
-                            )} 
-                        </div> 
-                        <div className="ac-grid" style={{ gridTemplateColumns:'1fr 1fr', marginBottom: 16 }}> 
-                            <Card><div style={{ fontSize: 11, color: S.muted }}>XP & RANK</div><div style={{ fontSize: 16, fontWeight: 700, color: S.lavender }}>{fmtInt(xp)} <span style={{ fontSize: 12, color: S.muted }}>(#{xpRank})</span></div><div style={{ fontSize: 11, color: S.gold, marginTop: 2 }}>{TITLES[titleIdx]}</div></Card> 
-                            <Card><div style={{ fontSize: 11, color: S.muted }}>TP & RANK</div><div style={{ fontSize: 16, fontWeight: 700, color: S.gold }}>{fmtTp(tp)} <span style={{ fontSize: 12, color: S.muted }}>(#{tpRank})</span></div><div style={{ fontSize: 11, color: S.mint, marginTop: 2 }}>Tier {tier}</div></Card> 
-                        </div> 
-                        <Card style={{ marginBottom: 16 }}> 
-                            <div style={{ fontSize: 11, color: S.muted, marginBottom: 4 }}>SPECIALIZATION</div> 
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>{baseProfile.specialization} ({baseProfile.status})</div> 
-                            <div style={{ fontSize: 11, color: S.muted, marginTop: 8, marginBottom: 4 }}>BIO</div> 
-                            <div style={{ fontSize: 12, color: S.text }}>{baseProfile.bio || 'No bio provided.'}</div> 
-                        </Card> 
-                        {isHuman && ( 
-                            <button className="ac-btn ac-btn-primary" style={{ width:'100%' }} onClick={save}>Save Changes</button> 
-                        )} 
-                    </div> 
-                </div> 
-            ); 
-        } 
-
-        // ============================================================ // HISTORY // ============================================================ 
-        function HistoryTab({ state }) { 
-            const h = state.human; const history = [...h.careerHistory].reverse().slice(0, 200); 
-            const icFor = (type) => ({ task:'📚', tournament_win:'🏆', tournament:'🎯', title:'⭐', pet:'🐾', tier:'🏅', quest:'🎁' }[type] || '•'); 
-            return ( 
-                <div className="ac-fade"> 
-                    <Section title="Career History" sub="Recent milestones"> 
-                        <Card> 
-                            {history.length === 0 ? <div style={{ color: S.muted, fontSize: 13 }}>No history yet.</div> : ( 
-                                <div style={{ maxHeight: 600, overflowY: 'auto' }}> 
-                                    {history.map((e, i) => ( 
-                                        <div key={i} style={{ display:'flex', gap: 12, padding: '10px 0', borderBottom: i<history.length-1?`1px solid ${S.border}`:'none' }}> 
-                                            <div style={{ fontSize: 20 }}>{icFor(e.type)}</div> 
-                                            <div style={{ flex: 1 }}> 
-                                                <div style={{ fontSize: 13 }}> 
-                                                    {e.type === 'task' && <>{e.taskId ? e.taskId.replace(/_/g,' ') : 'Task'} <span style={{ color: S.lavender, fontWeight: 700 }}>+{e.xp} XP</span></>} 
-                                                    {e.type === 'tournament_win' && <><strong style={{ color: S.gold }}>Won {e.note}</strong> · {fmtSigned(e.tp)} TP</>} 
-                                                    {e.type === 'tournament' && <>{e.note} · {fmtSigned(e.tp)} TP</>} 
-                                                    {e.type === 'title' && <><strong>Title unlocked: {e.title}</strong></>} 
-                                                    {e.type === 'pet' && <>{e.note}</>} 
-                                                    {e.type === 'tier' && <><strong>{e.note}</strong></>} 
-                                                    {e.type === 'quest' && <>{e.note}</>} 
-                                                </div> 
-                                                <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>{new Date(e.ts).toLocaleString()}</div> 
-                                            </div> 
-                                        </div> 
-                                    ))} 
-                                </div> 
-                            )} 
-                        </Card> 
-                    </Section> 
-                </div> 
-            ); 
-        } 
-
-        // ============================================================ // MAIN APP // ============================================================ 
-        const TABS = [ 
-            { id:'dashboard', label:'Dashboard', icon:'🏠' }, 
-            { id:'assignments', label:'Assignments', icon:'📐' }, 
-            { id:'studying', label:'Studying', icon:'📚' }, 
-            { id:'othertasks', label:'Other Tasks', icon:'🧹' }, 
-            { id:'mocks', label:'Mock Tests', icon:'📝' }, 
-            { id:'tournaments', label:'Tournaments', icon:'🏆' }, 
-            { id:'ranks', label:'Titles & Tiers', icon:'🏅' }, 
-            { id:'quests', label:'Quests', icon:'🎯' }, 
-            { id:'leaderboards', label:'Leaderboards', icon:'📊' }, 
-            { id:'pets', label:'Pets', icon:'🐾' }, 
-            { id:'inventory', label:'Inventory', icon:'🎒' }, 
-            { id:'profile', label:'Profile', icon:'👤' }, 
-            { id:'history', label:'History', icon:'📜' }, 
-        ]; 
-
-        function App() { 
-            const [loaded, setLoaded] = useState(false); 
-            const [tab, setTab] = useState('dashboard'); 
-            const [toast, setToast] = useState(null); 
-            const [, forceUpdate] = useState(0); 
-            const [saveModal, setSaveModal] = useState(false); 
-            const [welcomeBack, setWelcomeBack] = useState(null); 
-            const [savedStatus, setSavedStatus] = useState(null); 
-            const [profileModalId, setProfileModalId] = useState(null);
-            
-            const catalogRef = useRef(null); 
-            const stateRef = useRef(null); 
-            const [lbTick, setLbTick] = useState(0); 
-            
-            const bump = useCallback(() => { forceUpdate(v => v+1); setLbTick(v => v+1); }, []); 
-            const toastMsg = useCallback((msg) => { setToast(null); setTimeout(() => setToast(msg), 30); FX.play(/not quite|cannot|need >|failed/i.test(msg) ? 'bad' : 'ok'); const m = /^\+(\d+) XP/.exec(msg); if (m) FX.float('+' + m[1] + ' XP'); }, []); 
-
-            useEffect(() => { 
-                injectStyles(); 
-                const catalog = buildCatalog(); 
-                catalogRef.current = catalog; 
-                let state = loadState(catalog); 
-                const isNew = !state; 
-                if (!state) state = initState(catalog); 
-                
-                const prevTick = state.lastTick || Date.now(); 
-                const elapsedAway = Date.now() - prevTick; 
-                state = runTick(state, catalog, isNew); 
-                stateRef.current = state; 
-                saveState(state); 
-                
-                if (!isNew && elapsedAway > 5 * 60 * 1000) { 
-                    setWelcomeBack(elapsedAway); 
-                } 
-                setLoaded(true); 
-
-                const saveIv = setInterval(() => { if (stateRef.current) { const ok = saveState(stateRef.current); setSavedStatus(ok ? Date.now() : 'failed'); } }, 20000); 
-                const tickIv = setInterval(() => { if (!stateRef.current) return; runTick(stateRef.current, catalogRef.current, false); bump(); }, 30000); 
-                const renderIv = setInterval(() => { bump(); }, 1000); 
-                const clk = e => { if (e.target.closest && e.target.closest('button')) FX.play('click'); }; 
-                document.addEventListener('click', clk); 
-
-                return () => { clearInterval(saveIv); clearInterval(tickIv); clearInterval(renderIv); document.removeEventListener('click', clk); }; 
-            }, []); 
-
-            const update = useCallback((fn) => { if (!stateRef.current) return; fn(stateRef.current); const ok = saveState(stateRef.current); setSavedStatus(ok ? Date.now() : 'failed'); bump(); }, [bump]); 
-            
-            const handleComplete = useCallback((type, id, baseXp, extra) => { 
-                let xp = 0; const before = stateRef.current.human.highestTitle; 
-                update(s => { xp = doCompleteTask(s, catalogRef.current, type, id, baseXp, extra); }); 
-                const after = stateRef.current.human.highestTitle; 
-                if (after > before) setTimeout(() => { toastMsg('🎉 Title unlocked: ' + TITLES[after] + ' (+1 egg)'); FX.play('level'); FX.burst(['🎉','✨','⭐','🥚']); }, 1200); 
-                return xp; 
-            }, [update, toastMsg]); 
-
-            const handleJoin = useCallback((tid) => { let ok = false; update(s => { ok = joinTournament(s, tid); }); return ok; }, [update]); 
-            const handleHatch = useCallback(() => { let pet = null; update(s => { pet = hatchEgg(s); }); return pet; }, [update]); 
-            const handleEquip = useCallback((id) => { update(s => { s.human.equippedPet = s.human.equippedPet === id ? null : id; }); }, [update]); 
-            
-            const handleUsePotion = useCallback((type) => { 
-                update(s => { 
-                    const idx = s.human.inventory.potions.findIndex(p => p.type === type); 
-                    if (idx < 0) return; const inv = s.human.inventory.potions[idx]; 
-                    if (inv.quantity <= 0) return; const def = POTIONS[type]; 
-                    inv.quantity -= 1; if (inv.quantity <= 0) s.human.inventory.potions.splice(idx, 1); 
-                    s.human.activePotion = { type, expires: Date.now() + def.dur }; 
-                }); 
-            }, [update]); 
-
-            const handleBuyPotion = useCallback((type) => {
-                update(s => {
-                    const def = POTIONS[type];
-                    if (s.human.tp < def.cost) return;
-                    s.human.tp = round2(s.human.tp - def.cost);
-                    const ex = s.human.inventory.potions.find(p => p.type === type);
-                    if (ex) ex.quantity++;
-                    else s.human.inventory.potions.push({ type, quantity: 1 });
-                });
-            }, [update]);
-
-            const handleClaim = useCallback((period, quest) => { 
-                update(s => { 
-                    const h = s.human; const claimed = period === 'daily' ? h.quests.daily.claimed : h.quests.weekly.claimed; 
-                    if (claimed[quest.id]) return; claimed[quest.id] = true; 
-                    h.xp += quest.reward.xp; 
-                    if (quest.reward.egg) h.inventory.eggs += quest.reward.egg; 
-                    if (quest.reward.potion) {
-                        const ex = h.inventory.potions.find(p => p.type === quest.reward.potion);
-                        if (ex) ex.quantity++; else h.inventory.potions.push({ type: quest.reward.potion, quantity: 1 });
-                    }
-                    h.careerHistory.push({ ts: Date.now(), type: 'quest', note: `Quest ${quest.name}` }); 
-                }); 
-            }, [update]); 
-
-            const handleSaveProfile = useCallback((newProf) => {
-                update(s => {
-                    if (!s.profiles) s.profiles = {};
-                    s.profiles['human'] = { ...(s.profiles['human'] || {}), ...newProf };
-                    s.human.name = newProf.name;
-                    s.human.customization.avatar = newProf.avatar;
-                    s.human.customization.motto = newProf.motto;
-                    s.human.customization.bio = newProf.bio;
-                });
-                toastMsg('Profile updated!');
-            }, [update, toastMsg]);
-
-            const handleExport = useCallback(() => { 
-                try { 
-                    const data = JSON.stringify(stateRef.current, null, 2); 
-                    const blob = new Blob([data], { type: 'application/json' }); 
-                    const url = URL.createObjectURL(blob); 
-                    const a = document.createElement('a'); a.href = url; a.download = `academia-save-${todayKey()}.json`; 
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a); 
-                    setTimeout(() => URL.revokeObjectURL(url), 1000); 
-                    toastMsg('💾 Save exported to file!'); 
-                } catch (e) { toastMsg('Export failed: ' + e.message); } 
-            }, [toastMsg]); 
-
-            const handleImport = useCallback((file) => { 
-                const reader = new FileReader(); 
-                reader.onload = (e) => { 
-                    try { 
-                        const data = JSON.parse(e.target.result); 
-                        if (!data || data.version !== STATE_VERSION) throw new Error('Incompatible save version'); 
-                        if (!data.human || !data.ai) throw new Error('Invalid save data'); 
-                        const defaults = initHumanState(); 
-                        data.human = { ...defaults, ...data.human }; 
-                        if (!data.tournaments) data.tournaments = {}; 
-                        if (!data.profiles) data.profiles = {}; 
-                        stateRef.current = data; 
-                        saveState(data); 
-                        setSaveModal(false); 
-                        bump(); 
-                        toastMsg('✅ Save loaded! Welcome back.'); 
-                        const elapsed = Date.now() - (data.lastTick || Date.now()); 
-                        if (elapsed > 5 * 60 * 1000) setWelcomeBack(elapsed); 
-                    } catch (err) { toastMsg('Import failed: ' + err.message); } 
-                }; 
-                reader.readAsText(file); 
-            }, [bump, toastMsg]); 
-
-            const catalog = catalogRef.current; 
-            const state = stateRef.current; 
-            const lbXP = useMemo(() => state ? buildXPLeaderboard(state, catalog) : [], [state?.human.xp, state?.ai, lbTick, catalog, state?.profiles]); 
-            const lbTP = useMemo(() => state ? buildTPLeaderboard(state, catalog) : [], [state?.human.tp, state?.ai, lbTick, catalog, state?.profiles]); 
-            
-            if (!loaded || !catalog || !state) { 
-                return <div style={{ padding: 40, textAlign:'center', color: S.muted }}>Loading Academia...</div>; 
-            } 
-            
-            const lastSave = savedStatus === 'failed' ? 'Storage unavailable' : new Date(state.lastSave || Date.now()).toLocaleTimeString(); 
-
-            return ( 
-                <div style={{ minHeight:'100vh' }}> 
-                    <div className="ac-orbs"><i/><i/><i/></div>
-                    <div style={{ background: S.bg2, borderBottom: `1px solid ${S.border}`, padding: '12px 20px', position:'sticky', top: 0, zIndex: 100 }}> 
-                        <div style={{ maxWidth: 1200, margin:'0 auto', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap: 12 }}> 
-                            <div style={{ display:'flex', alignItems:'center', gap: 10 }}> 
-                                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing:'-0.5px', background: `linear-gradient(135deg, ${S.lavender}, ${S.pink}, ${S.gold})`, backgroundSize:'200% auto', animation:'shimmer 6s linear infinite', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>ACADEMIA</div> 
-                            </div> 
-                            <div style={{ display:'flex', gap: 12, alignItems:'center', fontSize: 12, flexWrap:'wrap' }}> 
-                                <div><span style={{ color: S.muted }}>XP:</span> <strong style={{ color: S.lavender }}>{fmtInt(state.human.xp)}</strong></div> 
-                                <div><span style={{ color: S.muted }}>TP:</span> <strong style={{ color: S.gold }}>{fmtTp(state.human.tp)}</strong></div> 
-                                <div><span style={{ color: S.muted }}>Combo:</span> <strong style={{ color: S.pink }}>{state.human.combo}×</strong></div> 
-                                <button className="ac-btn ac-btn-primary" style={{ padding:'8px 14px', fontSize: 12 }} onClick={() => setSaveModal(true)}> 💾 Save </button> 
-                                <button className="ac-btn" style={{ padding:'8px 12px', fontSize: 12 }} onClick={() => { FX.muted = !FX.muted; try { localStorage.setItem('academia_mute', FX.muted ? '1' : '0'); } catch (e) {} bump(); }}>{FX.muted ? '🔇' : '🔊'}</button> 
-                            </div> 
-                        </div> 
-                    </div> 
-                    <div style={{ background: S.bg, borderBottom: `1px solid ${S.border}`, position:'sticky', top: 56, zIndex: 99 }}> 
-                        <div style={{ maxWidth: 1200, margin:'0 auto', padding:'8px 12px', display:'flex', gap: 4, overflowX:'auto' }}> 
-                            {TABS.map(t => ( 
-                                <button key={t.id} className={`ac-tab ${tab===t.id?'active':''}`} onClick={() => setTab(t.id)}> 
-                                    <span style={{ marginRight: 4 }}>{t.icon}</span>{t.label} 
-                                </button> 
-                            ))} 
-                        </div> 
-                    </div> 
-                    <div style={{ maxWidth: 1200, margin:'0 auto', padding:'20px 16px 60px', position:'relative', zIndex:1 }}> 
-                        {tab === 'dashboard' && <Dashboard state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onNav={setTab} onOpenProfile={setProfileModalId} />} 
-                        {tab === 'assignments' && <AssignmentsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
-                        {tab === 'studying' && <StudyingTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
-                        {tab === 'othertasks' && <OtherTasksTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
-                        {tab === 'mocks' && <MockTestsTab state={state} onComplete={handleComplete} toast={toastMsg} />} 
-                        {tab === 'tournaments' && <TournamentsTab state={state} catalog={catalog} onJoin={handleJoin} toast={toastMsg} onOpenProfile={setProfileModalId} />} 
-                        {tab === 'ranks' && <TitlesTab state={state} lbTP={lbTP} />} 
-                        {tab === 'quests' && <QuestsTab state={state} onClaim={handleClaim} toast={toastMsg} />} 
-                        {tab === 'leaderboards' && <LeaderboardTab state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onOpenProfile={setProfileModalId} />} 
-                        {tab === 'pets' && <PetsTab state={state} onHatch={handleHatch} onEquip={handleEquip} toast={toastMsg} />} 
-                        {tab === 'inventory' && <InventoryTab state={state} onUsePotion={handleUsePotion} onBuyPotion={handleBuyPotion} toast={toastMsg} />} 
-                        {tab === 'profile' && <ProfileModal playerId="human" state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onClose={() => {}} onSaveProfile={handleSaveProfile} />} 
-                        {tab === 'history' && <HistoryTab state={state} />} 
-                    </div> 
-                    {saveModal && <SaveModal state={state} onExport={handleExport} onImport={handleImport} onClose={() => setSaveModal(false)} />} 
-                    {welcomeBack !== null && <WelcomeBack elapsedMs={welcomeBack} onClose={() => setWelcomeBack(null)} />} 
-                    {profileModalId !== null && <ProfileModal playerId={profileModalId} state={state} catalog={catalog} lbXP={lbXP} lbTP={lbTP} onClose={() => setProfileModalId(null)} onSaveProfile={handleSaveProfile} />} 
-                    <Toast msg={toast} onDone={() => setToast(null)} /> 
-                </div> 
-            ); 
-        } 
-
-        const root = ReactDOM.createRoot(document.getElementById('root')); 
-        root.render(<App />); 
-    </script>
-</body>
-</html>
+                                    <input className="ac-input" value={motto} onChange={e => setMotto(e.target.value)} placeholder="Motto
