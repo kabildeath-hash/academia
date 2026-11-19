@@ -66,13 +66,20 @@
         const round2 = n => Math.round(n*100)/100; 
         const clamp = (v,a,b) => Math.max(a,Math.min(b,v)); 
         const hashStr = s => { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return h; }; 
-        const todayKey = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; 
-        const weekKey = (d=new Date()) => { const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-t.getDay()); return todayKey(t); }; 
+        // ---- Nepal time (Asia/Kathmandu, UTC+5:45) ----
+        // The whole game runs on Nepal wall time whatever the device timezone is:
+        // daily/weekly resets, streak days and the AI study schedule all follow Kathmandu.
+        const NP_OFFSET_MIN = 345;                                        // UTC+05:45
+        const npDate = (ts = Date.now()) => new Date(ts + (NP_OFFSET_MIN + new Date(ts).getTimezoneOffset()) * 60000);
+        const npDayStart = key => Date.parse(key + 'T00:00:00+05:45');    // exact Nepal-midnight epoch of a 'YYYY-MM-DD' day key
+        const fmtNP = ts => new Date(ts).toLocaleString('en-US', { timeZone: 'Asia/Kathmandu' });
+        const todayKey = (d=npDate()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; 
+        const weekKey = (d=npDate()) => { const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-t.getDay()); return todayKey(t); }; 
         const fmtInt = n => Math.floor(n).toLocaleString('en-US'); 
         const fmtShort = n => { n=Math.floor(n); if(n>=1e12)return (n/1e12).toFixed(2)+'T'; if(n>=1e9)return (n/1e9).toFixed(2)+'B'; if(n>=1e6)return (n/1e6).toFixed(2)+'M'; if(n>=1e3)return (n/1e3).toFixed(1)+'K'; return n.toString(); }; 
         const fmtRp = n => Math.round(n).toLocaleString('en-US'); 
         const fmtTime = (ms) => { const s=Math.max(0,Math.floor(ms/1000)); const d=Math.floor(s/86400); const h=Math.floor((s%86400)/3600); const m=Math.floor((s%3600)/60); if(d>0) return `${d}d ${h}h`; if(h>0) return `${h}h ${m}m`; if(m>0) return `${m}m ${s%60}s`; return `${s}s`; }; 
-        const fmtTime12 = ms => new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); 
+        const fmtTime12 = ms => new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'Asia/Kathmandu'}); 
 
         // ============================================================ // NAMES & TEMPLATES // ============================================================ 
         const FIRSTS = { jp:['Akira','Haruto','Yuki','Sora','Ren','Hikaru','Kaito','Riku','Yuto','Sota','Daiki','Ryo','Kenta','Sho','Takeru','Yuma','Takumi','Itsuki','Kazuki','Naoki','Hiroshi','Tatsuya','Masato','Satoshi','Hayato','Shun','Kosei','Yosuke','Keita','Mitsuki','Hana','Sakura','Yui','Aoi','Rin','Mei','Emi','Kaori','Nanami','Yukino','Akari','Chiyo','Hikari','Honoka','Koharu','Mio','Shizuku','Tsukiko','Kaede','Sayuri'], ru:['Alexei','Dmitri','Ivan','Mikhail','Nikolai','Pavel','Sergei','Vladimir','Yuri','Anton','Boris','Andrei','Kirill','Maxim','Viktor','Oleg','Roman','Sasha','Egor','Fyodor','Lev','Grigori','Igor','Konstantin','Timur','Artem','Bogdan','Denis','Emil','Feodor','Vasily','Arseny','Ilya','Nikita','Stepan','Yaroslav','Zakhar','Daniil','Maksim','Trofim','Anya','Katya','Masha','Natasha','Oksana','Tatiana','Vera','Yulia','Zoya','Lena'], de:['Lukas','Felix','Maximilian','Jonas','Leon','Paul','Elias','Noah','Ben','Finn','Anton','Julian','Moritz','Tobias','Sebastian','Niklas','Alexander','David','Fabian','Simon','Florian','Philipp','Jakob','Matthias','Georg','Heinrich','Karl','Otto','Werner','Klaus','Hans','Friedrich','Johann','Wilhelm','Ludwig','Anna','Lena','Sophie','Marie','Emma','Mia','Clara','Greta','Hannah','Lina','Nora','Zoe','Amelie','Johanna','Erika'], us:['James','Michael','William','Benjamin','Daniel','Ethan','Noah','Liam','Mason','Logan','Lucas','Henry','Jack','Owen','Carter','Wyatt','Julian','Gabriel','Isaac','Caleb','Austin','Connor','Evan','Sean','Ryan','Brandon','Tyler','Justin','Nathan','Zachary','Aaron','Adam','Jared','Kevin','Eric','Ashley','Emma','Olivia','Ava','Sophia','Isabella','Mia','Charlotte','Amelia','Harper','Evelyn','Abigail','Emily','Ella','Grace'] }; 
@@ -344,9 +351,13 @@
                 rough: { text: '', updatedAt: 0 },                     // scratchpad, autosaved while typing
                 homeworks: [],                                          // [{id,title,subject,due,priority,notes,done,createdAt,completedAt}]
                 t321: { count: 0, lastAt: 0 },                          // 3·2·1 lock-in ritual counters
+                timers: { saved: [], active: null, sw: { base: 0, startedAt: null } }, // saved: [{id,label,sec}], active: {label,sec,endAt,remaining,done}
+                clicker: { count: 0 },                                  // the pointless-but-loyal click counter
                 lastTool: 'defs'
             };
         }
+        function ensureTimers(s) { if (!s.human.studyTools.timers) s.human.studyTools.timers = { saved: [], active: null, sw: { base: 0, startedAt: null } }; return s.human.studyTools.timers; }
+        const fmtClock = sec => { sec = Math.max(0, Math.ceil(sec)); const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), x = sec%60; return (h ? h + ':' + String(m).padStart(2,'0') : m) + ':' + String(x).padStart(2,'0'); };
 
         function initHumanState() {
             const now = Date.now();
@@ -714,10 +725,13 @@ async function readFromHandle(handle) {
             const stepHours = totalHours / steps;
 
             for (let s = 0; s < steps; s++) {
-                const simDate = new Date(now - (steps - s) * stepHours * 3600000);
-                const hour = simDate.getHours();
-                const weekday = simDate.getDay();
-                const ts = simDate.getTime();
+                const ts = now - (steps - s) * stepHours * 3600000;
+                const npd = npDate(ts);                 // Nepal wall time for this step
+                const hour = npd.getHours();
+                const weekday = npd.getDay();
+                // The AIs are students too: they sleep 8pm–4am Nepal time — no grinding,
+                // no duels (the human player can study whenever they like).
+                const asleep = hour >= 20 || hour < 4;
                 const bucket = Math.floor(ts / 3600000);
 
                 // --- Per-AI XP grinding (realistic cadence) ---
@@ -726,6 +740,7 @@ async function readFromHandle(handle) {
                     const cur = state.ai[p.id];
                     if (!cur || cur.retired) continue;
                     if (ts < cur.offUntil) continue; // still on a break
+                    if (asleep) { cur.energy = clamp((cur.energy || 1) + 0.08, 0.25, 1.6); continue; } // sleeping: no grinding, energy recovers
 
                     const pr = p.aiProfile;
                     const rng = mulberry32(hashStr(p.id + '_' + bucket));
@@ -789,7 +804,8 @@ async function readFromHandle(handle) {
                 // --- Simulated AI vs AI Ranked ELO duels, per category ---
                 // Each category ladder resolves its own duels with its own matchmaking, so the three
                 // leaderboards evolve independently and end up with different top players.
-                for (const cat of RANKED_CATEGORIES) {
+                // No duels during the 8pm–4am Nepal sleep window.
+                for (const cat of (asleep ? [] : RANKED_CATEGORIES)) {
                     const duelRng = mulberry32(bucket + 999 + hashStr(cat));
                     const activeAIs = catalog.filter(p => p.id !== 'human' && !state.ai[p.id]?.retired && ts >= (state.ai[p.id]?.lastDuelTs || 0));
                     if (activeAIs.length < 2) continue;
@@ -852,7 +868,7 @@ async function readFromHandle(handle) {
             // their ladder position like everyone else. We do keep a light churn rule so the very
             // bottom of the field occasionally "retires" (quits the season), which keeps the
             // leaderboards from filling with permanently-inactive zero-output scholars.
-            const rng = mulberry32(Math.floor(Date.now() / 86400000));
+            const rng = mulberry32(Math.floor((Date.now() + NP_OFFSET_MIN * 60000) / 86400000)); // daily seed rolls over at Nepal midnight
             for (const p of catalog) {
                 if (p.id === 'human' || p.vip) continue;
                 const cur = state.ai[p.id];
@@ -894,8 +910,8 @@ async function readFromHandle(handle) {
             } 
             
             if (state.human.lastTaskDay) { 
-                const lastDay = new Date(state.human.lastTaskDay + 'T00:00:00'); 
-                const todayDate = new Date(today + 'T00:00:00'); 
+                const lastDay = npDayStart(state.human.lastTaskDay); 
+                const todayDate = npDayStart(today); 
                 const diffDays = Math.floor((todayDate - lastDay) / (24*3600*1000)); 
                 if (diffDays > 1) state.human.streak = 0; 
             } 
@@ -944,7 +960,7 @@ async function readFromHandle(handle) {
             h.comboExpiry = now + 2*3600*1000; 
             
             if (h.dailyStats.tasks === 1) { 
-                const yest = new Date(); yest.setDate(yest.getDate()-1); 
+                const yest = npDate(); yest.setDate(yest.getDate()-1); 
                 if (h.lastTaskDay === todayKey(yest) || h.streak === 0) { h.streak = h.streak === 0 ? 1 : h.streak + 1; } 
                 else { h.streak = Math.max(1, h.streak); } 
                 if (h.streak > h.longestStreak) h.longestStreak = h.streak; 
@@ -1143,13 +1159,15 @@ async function readFromHandle(handle) {
                 .st-beat{animation:stBeat 1s ease-in-out infinite;display:inline-block}
                 .st-wiggle{display:inline-block;animation:stWiggle 2.6s ease-in-out infinite}
                 .st-btn{animation:stBeat 1.7s ease-in-out infinite,glow 2.3s ease-in-out infinite}
+                .timer-widget{position:fixed;left:14px;bottom:14px;display:flex;flex-direction:column;gap:8px;z-index:1500}
+                @media(max-width:600px){.timer-widget{left:12px;bottom:104px}}
                 @media(max-width:600px){.ac-toast{left:12px;right:12px;bottom:16px;max-width:none}}
                 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}
             `; const style = document.createElement('style'); style.id = 'academia-styles'; style.textContent = css; document.head.appendChild(style); 
         } 
 
         function Toast({ msg, onDone }) { const ref = useRef(onDone); ref.current = onDone; useEffect(() => { if (!msg) return; const t = setTimeout(() => ref.current(), 2600); return () => clearTimeout(t); }, [msg]); if (!msg) return null; return <div className="ac-toast">{msg}</div>; } 
-        function Card({ children, style }) { return <div className="ac-card" style={style}>{children}</div>; } 
+        function Card({ children, style, onClick }) { return <div className="ac-card" style={style} onClick={onClick}>{children}</div>; } 
         function Section({ title, sub, children, right }) { return ( <div style={{ marginBottom: 20 }}> <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom: 12, flexWrap:'wrap', gap: 8 }}> <div> <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div> {sub && <div style={{ fontSize: 12, color: S.muted, marginTop: 2 }}>{sub}</div>} </div> {right} </div> {children} </div> ); } 
         function ProgressBar({ value, max, color = S.lavender, height = 8 }) { const pct = clamp((value/max)*100, 0, 100); return ( <div style={{ background: S.bg2, borderRadius: 20, height, overflow:'hidden' }}> <div className="ac-bar" style={{ width: pct+'%', height:'100%', background: `linear-gradient(90deg, ${color}, ${color}cc)`, borderRadius: 20 }} /> </div> ); } 
         function VIPBadge({ small }) { return <span style={{ fontSize: small ? 9 : 10, background:'linear-gradient(135deg,#f5d78e,#c9a253)', color:'#1a1a24', padding: small?'1px 5px':'2px 7px', borderRadius: 4, fontWeight: 800 }}>VIP</span>; } 
@@ -1557,7 +1575,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                                         {rm.outcome.toUpperCase()}
                                                     </span>
                                                     <strong style={{ fontSize: 13 }}>{rmcMeta.icon} {rm.mode} ({rm.hours}h) vs. {rm.oppName}</strong>
-                                                    <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Score: {fmtInt(rm.myXp)} XP vs {fmtInt(rm.oppXp)} XP · {new Date(rm.ts).toLocaleString()}</div>
+                                                    <div style={{ fontSize: 11, color: S.muted, marginTop: 4 }}>Score: {fmtInt(rm.myXp)} XP vs {fmtInt(rm.oppXp)} XP · {fmtNP(rm.ts)}</div>
                                                 </div>
                                                 <div style={{ fontSize: 15, fontWeight: 800, color: rm.rpDelta > 0 ? S.mint : rm.rpDelta < 0 ? S.danger : S.muted }}>
                                                     {rm.rpDelta > 0 ? `+${rm.rpDelta}` : rm.rpDelta} RP
@@ -2049,7 +2067,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                                                     {e.type === 'tier' && <><strong>{e.note}</strong></>} 
                                                     {e.type === 'quest' && <>{e.note}</>} 
                                                 </div> 
-                                                <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>{new Date(e.ts).toLocaleString()}</div> 
+                                                <div style={{ fontSize: 10, color: S.muted, marginTop: 2 }}>{fmtNP(e.ts)}</div> 
                                             </div> 
                                         </div> 
                                     ))} 
@@ -2371,8 +2389,8 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
             const [sortMode, setSortMode] = useState('priority'); 
             const [del, setDel] = useState(null); 
 
-            const todayMs = new Date(todayKey() + 'T00:00:00').getTime(); 
-            const dueMs = hw => hw.due ? new Date(hw.due + 'T00:00:00').getTime() : Infinity; 
+            const todayMs = npDayStart(todayKey()); 
+            const dueMs = hw => hw.due ? npDayStart(hw.due) : Infinity; 
             const fmtDue = ds => new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); 
             const prOrder = p => (HW_PRIORITIES[p] || HW_PRIORITIES.medium).order; 
 
@@ -2613,16 +2631,205 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
             ); 
         } 
 
+        // --- ST: Timer & stopwatch ---
+        function ToolTimer({ st, update, toast }) { 
+            const T = st.timers || { saved: [], active: null, sw: { base: 0, startedAt: null } }; 
+            const [h, setH] = useState(0); const [m, setM] = useState(25); const [s, setS] = useState(0); 
+            const [name, setName] = useState(''); 
+            const [, setTick] = useState(0); 
+            useEffect(() => { const i = setInterval(() => setTick(t => t + 1), 250); return () => clearInterval(i); }, []); 
+            const total = h * 3600 + m * 60 + s; 
+            const start = (sec, label) => { 
+                if (!sec || sec <= 0) { toast('⏱️ Pick a duration first'); return; } 
+                FX.play('click'); 
+                update(st2 => { ensureTimers(st2).active = { label: label || 'Timer', sec, endAt: Date.now() + sec * 1000, done: false }; }); 
+                toast(`▶️ ${label || 'Timer'} started · ${fmtClock(sec)} — countdown shows in the corner of every tab`); 
+            }; 
+            const pauseToggle = () => update(st2 => { 
+                const a = ensureTimers(st2).active; if (!a || a.done) return; 
+                if (a.endAt) { a.remaining = Math.max(0, a.endAt - Date.now()); a.endAt = null; } 
+                else if (a.remaining) { a.endAt = Date.now() + a.remaining; a.remaining = 0; } 
+            }); 
+            const cancel = () => update(st2 => { ensureTimers(st2).active = null; }); 
+            const savePreset = () => { 
+                if (total <= 0) { toast('⏱️ Set a duration first'); return; } 
+                update(st2 => { ensureTimers(st2).saved.push({ id: uid(), label: (name.trim() || fmtClock(total)).slice(0, 24), sec: total }); }); 
+                setName(''); toast('💾 Timer preset saved'); 
+            }; 
+            const sw = T.sw || { base: 0, startedAt: null }; 
+            const swMs = sw.base + (sw.startedAt ? Date.now() - sw.startedAt : 0); 
+            const swToggle = () => { FX.play('click'); update(st2 => { const w = ensureTimers(st2).sw; if (w.startedAt) { w.base += Date.now() - w.startedAt; w.startedAt = null; } else w.startedAt = Date.now(); }); }; 
+            const swReset = () => update(st2 => { ensureTimers(st2).sw = { base: 0, startedAt: null }; }); 
+            const a = T.active; 
+            const aRem = a ? (a.endAt ? (a.endAt - Date.now()) / 1000 : (a.remaining || 0) / 1000) : 0; 
+            const numInput = (val, set, max, unit) => ( 
+                <label key={unit} style={{ fontSize: 12, color: S.muted, display:'flex', alignItems:'center', gap: 4 }}> 
+                    <input type="number" min="0" max={max} value={val} onChange={e => set(clamp(parseInt(e.target.value) || 0, 0, max))} style={{ width: 58, background: S.bg2, color: S.text, border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 6px', fontSize: 16, fontWeight: 700, textAlign:'center', fontFamily:'inherit' }} /> {unit} 
+                </label> 
+            ); 
+            return ( 
+                <div className="ac-fade"> 
+                    <Card style={{ textAlign:'center', padding: '26px 20px', marginBottom: 14 }}> 
+                        <div style={{ fontSize: 13, color: S.muted, marginBottom: 8, letterSpacing: 2, fontWeight: 700 }}>⏱️ COUNTDOWN TIMER</div> 
+                        {a ? ( 
+                            <div className="ac-fade"> 
+                                <div style={{ fontSize: 'clamp(46px, 12vw, 76px)', fontWeight: 900, color: a.done ? S.mint : S.lavender, lineHeight: 1.1 }}>{a.done ? '⏰' : fmtClock(aRem)}</div> 
+                                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>{a.label}{a.done ? ' — finished!' : (a.endAt ? '' : ' · paused')}</div> 
+                                <div style={{ display:'flex', gap: 10, justifyContent:'center', flexWrap:'wrap' }}> 
+                                    {!a.done && <button className="ac-btn" onClick={pauseToggle}>{a.endAt ? '⏸ Pause' : '▶️ Resume'}</button>} 
+                                    <button className="ac-btn ac-btn-primary" onClick={() => start(a.sec, a.label)}>🔁 Restart</button> 
+                                    <button className="ac-btn" onClick={cancel}>{a.done ? '✕ Dismiss' : '✕ Cancel'}</button> 
+                                </div> 
+                                <div style={{ fontSize: 11, color: S.muted, marginTop: 10 }}>While it runs, the countdown stays pinned in the corner of every tab.</div> 
+                            </div> 
+                        ) : ( 
+                            <div> 
+                                <div style={{ display:'flex', gap: 8, justifyContent:'center', marginBottom: 16, flexWrap:'wrap' }}> 
+                                    {[[5,'5m'],[10,'10m'],[15,'15m'],[25,'25m'],[45,'45m'],[90,'90m']].map(([sec, lab]) => ( 
+                                        <button key={lab} className="ac-btn" onClick={() => start(sec * 60, lab === '25m' ? 'Pomodoro' : lab + ' timer')}>{lab}</button> 
+                                    ))} 
+                                </div> 
+                                <div style={{ display:'flex', gap: 8, justifyContent:'center', alignItems:'center', flexWrap:'wrap', marginBottom: 14 }}> 
+                                    {[['h', h, setH, 23], ['m', m, setM, 59], ['s', s, setS, 59]].map(([unit, val, set, max]) => numInput(val, set, max, unit))} 
+                                </div> 
+                                <div style={{ display:'flex', gap: 8, justifyContent:'center', flexWrap:'wrap' }}> 
+                                    <input value={name} onChange={e => setName(e.target.value)} placeholder="name (optional)" maxLength={24} style={{ background: S.bg2, color: S.text, border: `1px solid ${S.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, fontFamily:'inherit', width: 150 }} /> 
+                                    <button className="ac-btn ac-btn-primary" onClick={() => start(total, name.trim() || undefined)}>▶️ Start</button> 
+                                    <button className="ac-btn" onClick={savePreset}>💾 Save preset</button> 
+                                </div> 
+                            </div> 
+                        )} 
+                    </Card> 
+                    <Card style={{ marginBottom: 14 }}> 
+                        <div style={{ fontSize: 13, color: S.muted, marginBottom: 8, letterSpacing: 2, fontWeight: 700 }}>💾 SAVED TIMERS{(T.saved || []).length ? ` (${T.saved.length})` : ''}</div> 
+                        {(T.saved || []).length === 0 ? <div style={{ fontSize: 13, color: S.muted }}>No saved timers yet — set a duration above and press “Save preset”.</div> : ( 
+                            <div style={{ display:'flex', flexDirection:'column', gap: 6 }}> 
+                                {T.saved.map(p => ( 
+                                    <div key={p.id} style={{ display:'flex', alignItems:'center', gap: 8, background: S.bg2, borderRadius: 10, padding: '8px 12px' }}> 
+                                        <div style={{ flex: 1, minWidth: 0 }}> 
+                                            <div style={{ fontSize: 14, fontWeight: 700 }}>{p.label}</div> 
+                                            <div style={{ fontSize: 11, color: S.muted }}>{fmtClock(p.sec)}</div> 
+                                        </div> 
+                                        <button className="ac-btn" style={{ padding: '6px 12px' }} onClick={() => start(p.sec, p.label)}>▶</button> 
+                                        <button className="ac-btn" style={{ padding: '6px 10px' }} onClick={() => update(st2 => { const tm = ensureTimers(st2); tm.saved = tm.saved.filter(x => x.id !== p.id); })}>🗑</button> 
+                                    </div> 
+                                ))} 
+                            </div> 
+                        )} 
+                    </Card> 
+                    <Card style={{ textAlign:'center', padding: '24px 20px' }}> 
+                        <div style={{ fontSize: 13, color: S.muted, marginBottom: 8, letterSpacing: 2, fontWeight: 700 }}>⏱️ STOPWATCH</div> 
+                        <div style={{ fontSize: 'clamp(40px, 10vw, 64px)', fontWeight: 900, color: sw.startedAt ? S.pink : S.text, lineHeight: 1.15 }}>{fmtClock(swMs / 1000)}</div> 
+                        <div style={{ fontSize: 11, color: S.muted, margin: '4px 0 14px' }}>{sw.startedAt ? 'running — visible on every tab' : (sw.base ? 'paused' : 'ready')}</div> 
+                        <div style={{ display:'flex', gap: 10, justifyContent:'center' }}> 
+                            <button className="ac-btn ac-btn-primary" onClick={swToggle}>{sw.startedAt ? '⏸ Pause' : '▶️ Start'}</button> 
+                            <button className="ac-btn" onClick={swReset} disabled={!sw.base && !sw.startedAt}>↺ Reset</button> 
+                        </div> 
+                    </Card> 
+                </div> 
+            ); 
+        } 
+
+        // --- ST: floating timer/stopwatch widget, pinned to the corner on every tab ---
+        function TimerWidget({ state, update, toast, onNav }) { 
+            const tm = state.human.studyTools && state.human.studyTools.timers; 
+            const a = tm && tm.active, sw = tm && tm.sw; 
+            const swRun = sw && sw.startedAt; 
+            const [, setTick] = useState(0); 
+            const fired = useRef(0); 
+            useEffect(() => { 
+                if (!a && !swRun) return; 
+                const i = setInterval(() => setTick(t => t + 1), 250); 
+                return () => clearInterval(i); 
+            }, [!!a, !!swRun]); 
+            useEffect(() => { 
+                if (a && a.endAt && !a.done && Date.now() >= a.endAt && fired.current !== a.endAt) { 
+                    fired.current = a.endAt; 
+                    update(s => { const t2 = ensureTimers(s); if (t2.active) t2.active.done = true; }); 
+                    FX.tone(523, .14, 'triangle', .08); FX.tone(659, .14, 'triangle', .08, .12); FX.tone(784, .16, 'triangle', .08, .24); FX.tone(1047, .5, 'triangle', .09, .38); 
+                    FX.burst(['⏰', '✨', '💫'], 26); 
+                    toast(`⏰ ${a.label} — time's up!`); 
+                } 
+            }); 
+            if (!a && !swRun) return null; 
+            const pill = { display:'flex', alignItems:'center', gap: 8, background: S.panel2, border: `1px solid ${S.lavender}`, borderRadius: 12, padding: '8px 12px', boxShadow: '0 6px 20px rgba(196,181,253,.25)', cursor:'pointer', maxWidth: 230 }; 
+            const aRem = a ? (a.endAt ? (a.endAt - Date.now()) / 1000 : (a.remaining || 0) / 1000) : 0; 
+            const swMs = sw ? sw.base + (sw.startedAt ? Date.now() - sw.startedAt : 0) : 0; 
+            const openTool = () => { FX.play('click'); update(s => { if (s.human.studyTools) s.human.studyTools.lastTool = 'timer'; }); onNav('studytools'); }; 
+            return ( 
+                <div className="timer-widget"> 
+                    {a && ( 
+                        <div className={a.done ? 'ac-live' : ''} style={pill} onClick={openTool} title="Open timer"> 
+                            <span style={{ fontSize: 16 }}>{a.done ? '⏰' : '⏱️'}</span> 
+                            <div style={{ minWidth: 0 }}> 
+                                <div style={{ fontSize: 15, fontWeight: 800, color: a.done ? S.mint : S.lavender, lineHeight: 1.1 }}>{a.done ? 'done!' : fmtClock(aRem)}</div> 
+                                <div style={{ fontSize: 10, color: S.muted, maxWidth: 120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.label}</div> 
+                            </div> 
+                            <button style={{ marginLeft:'auto', background:'transparent', border:'none', color: S.muted, cursor:'pointer', fontSize: 12, padding: 4 }} onClick={e => { e.stopPropagation(); update(s => { ensureTimers(s).active = null; }); }}>✕</button> 
+                        </div> 
+                    )} 
+                    {swRun && ( 
+                        <div style={pill} onClick={openTool} title="Open stopwatch"> 
+                            <span style={{ fontSize: 16 }}>⏱️</span> 
+                            <div style={{ fontSize: 15, fontWeight: 800, color: S.pink, lineHeight: 1.1 }}>{fmtClock(swMs / 1000)}</div> 
+                            <button style={{ marginLeft:'auto', background:'transparent', border:'none', color: S.muted, cursor:'pointer', fontSize: 12, padding: 4 }} onClick={e => { e.stopPropagation(); update(s => { const w = ensureTimers(s).sw; w.base += Date.now() - w.startedAt; w.startedAt = null; }); }}>⏸</button> 
+                        </div> 
+                    )} 
+                </div> 
+            ); 
+        } 
+
+        // --- ST: Clicker — a number that goes up. That's it. That's the tool. ---
+        function ToolClicker({ st, update, toast }) { 
+            const INK = '#08080c'; 
+            const C = st.clicker || { count: 0 }; 
+            const [pop, setPop] = useState(0); 
+            const [floats, setFloats] = useState([]); 
+            const [confirmReset, setConfirmReset] = useState(0); 
+            const click = e => { 
+                const n = (C.count || 0) + 1; 
+                FX.tone(540 + (n % 25) * 6, .05, 'triangle', .03); 
+                setPop(p => p + 1); 
+                const card = e.currentTarget.getBoundingClientRect(); 
+                const f = { id: n, x: e.clientX - card.left, y: e.clientY - card.top }; 
+                setFloats(fl => [...fl.slice(-8), f]); 
+                setTimeout(() => setFloats(fl => fl.filter(z => z.id !== f.id)), 900); 
+                if (n % 100 === 0) { toast(`✨ ${fmtInt(n)} clicks!`); FX.burst(['✨', '💫', '🎯'], 20); } 
+                update(s => { if (!s.human.studyTools.clicker) s.human.studyTools.clicker = { count: 0 }; s.human.studyTools.clicker.count = n; }); 
+            }; 
+            return ( 
+                <Card onClick={click} style={{ textAlign:'center', padding: '40px 20px', position:'relative', overflow:'hidden', cursor:'pointer', color: INK, userSelect:'none', WebkitUserSelect:'none', background: 'linear-gradient(165deg,#fff4d6 0%,#ffe0ef 55%,#e2f0fc 100%)', border: `1.5px solid ${INK}2e` }}> 
+                    {['✨','🎯','💫'].map((em, i) => ( 
+                        <span key={i} className="ac-float" style={{ position:'absolute', left: (12 + i * 34) + '%', top: (i % 2 ? 16 : 68) + '%', fontSize: 18, opacity: .4, pointerEvents:'none', animationDelay: (i * .45) + 's' }}>{em}</span> 
+                    ))} 
+                    <div className="st-wiggle" style={{ fontSize: 34, marginBottom: 10 }}>🎯</div> 
+                    <div style={{ fontSize: 12, color: 'rgba(8,8,12,.55)', marginBottom: 2, letterSpacing: 3, fontWeight: 800 }}>CLICKS</div> 
+                    <div key={pop} className="st-num" style={{ '--g': '#f5b3d3aa', fontSize: 'clamp(72px, 18vw, 128px)', fontWeight: 900, color: INK, lineHeight: 1.15 }}>{fmtInt(C.count || 0)}</div> 
+                    <div style={{ fontSize: 13, color: 'rgba(8,8,12,.6)', marginTop: 10 }}>tap anywhere on this card · one tap = +1 · no limits</div> 
+                    {floats.map(f => ( 
+                        <span key={f.id} style={{ position:'absolute', left: f.x, top: f.y, fontSize: 18, fontWeight: 800, color: INK, pointerEvents:'none', animation: 'rise .9s ease-out forwards' }}>+1</span> 
+                    ))} 
+                    <div style={{ marginTop: 18 }}> 
+                        {confirmReset ? ( 
+                            <button className="ac-btn" style={{ background: '#fff', color: INK, border: `1.5px solid ${INK}`, boxShadow: 'none' }} onClick={e => { e.stopPropagation(); setConfirmReset(0); update(s => { s.human.studyTools.clicker = { count: 0 }; }); toast('↺ Clicker reset'); }}>really reset?</button> 
+                        ) : ( 
+                            <button className="ac-btn" style={{ background: 'transparent', color: 'rgba(8,8,12,.5)', border: 'none', boxShadow: 'none', fontSize: 11, padding: '4px 8px' }} onClick={e => { e.stopPropagation(); setConfirmReset(1); setTimeout(() => setConfirmReset(0), 3000); }}>↺ reset</button> 
+                        )} 
+                    </div> 
+                </Card> 
+            ); 
+        } 
+
         function StudyingToolsTab({ state, update, toast, onNav }) { 
             const st = state.human.studyTools || defaultStudyTools(); 
-            const [tool, setTool] = useState(['rough', 'homeworks', 't321'].indexOf(st.lastTool) >= 0 ? st.lastTool : 'defs'); 
-            const TOOLS = [['defs', '📖 Definitions'], ['rough', '✏️ Rough'], ['homeworks', '📋 Homeworks'], ['t321', '✨ 321']]; 
+            const [tool, setTool] = useState(['rough', 'homeworks', 't321', 'timer', 'clicker'].indexOf(st.lastTool) >= 0 ? st.lastTool : 'defs'); 
+            const TOOLS = [['defs', '📖 Definitions'], ['rough', '✏️ Rough'], ['homeworks', '📋 Homeworks'], ['t321', '✨ 321'], ['timer', '⏱️ Timer'], ['clicker', '🔢 Clicker']]; 
             const pick = t => { setTool(t); update(s => { if (!s.human.studyTools) s.human.studyTools = defaultStudyTools(); s.human.studyTools.lastTool = t; }); }; 
             const nDefs = (st.defs && st.defs.defs ? st.defs.defs.length : 0); 
             const nHw = (st.homeworks || []).filter(h => !h.done).length; 
             return ( 
                 <div className="ac-fade"> 
-                    <Section title="Studying Tools" sub="Your definitions library, scratchpad, homework planner and 3·2·1 lock-in ritual — saved with your game."> 
+                    <Section title="Studying Tools" sub="Definitions, scratchpad, homework planner, 3·2·1 ritual, timer & stopwatch, clicker — saved with your game."> 
                         <div style={{ display:'flex', gap: 4, flexWrap:'wrap' }}> 
                             {TOOLS.map(([id, label]) => ( 
                                 <button key={id} className={`ac-tab ${tool === id ? 'active' : ''}`} onClick={() => pick(id)}> 
@@ -2635,6 +2842,8 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                     {tool === 'rough' && <RoughTool st={st} update={update} toast={toast} />} 
                     {tool === 'homeworks' && <HomeworksTool st={st} update={update} toast={toast} />} 
                     {tool === 't321' && <Tool321 st={st} update={update} toast={toast} onNav={onNav} />} 
+                    {tool === 'timer' && <ToolTimer st={st} update={update} toast={toast} />} 
+                    {tool === 'clicker' && <ToolClicker st={st} update={update} toast={toast} />} 
                 </div> 
             ); 
         } 
@@ -2914,6 +3123,7 @@ function SaveModal({ state, onExport, onImport, onClose, toast }) {
                     {welcomeBack !== null && <WelcomeBack elapsedMs={welcomeBack} onClose={() => setWelcomeBack(null)} />} 
                     {profileModalId !== null && <ProfileModal playerId={profileModalId} state={state} catalog={catalog} lbXP={lbXP} lbRP={lbRP} lbRPByCat={lbRPByCat} onClose={() => setProfileModalId(null)} onSaveProfile={handleSaveProfile} />}
                     <Toast msg={toast} onDone={() => setToast(null)} /> 
+                    <TimerWidget state={state} update={update} toast={m => setToast(m)} onNav={setTab} /> 
                 </div> 
             ); 
         } 
